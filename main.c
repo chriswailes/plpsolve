@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
 		dictionary_view(&dict);
 		return 0;
 	} else {
-		printf("File %s not found\n", argv[1]);
+		printf("File %s not found\n", cfg.filename);
 		return -1;
 	}
 }
