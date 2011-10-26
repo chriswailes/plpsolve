@@ -40,7 +40,10 @@ void dictionary_pivot(dictionary* dict) {
 
 void dictionary_view(const dictionary* dict) {
 	unsigned int i, j;
-
+	
+	printf("Num constraints: %d\n", dict->num_cons);
+	printf("Num variables: %d\n\n", dict->num_vars);
+	
 	printf("Objective coefficients:\n");
 	for (i = 0; i < dict->num_vars; ++i) {
 		printf("%g  ", dict->objective[i]);

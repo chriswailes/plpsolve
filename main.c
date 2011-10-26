@@ -45,6 +45,7 @@ int main(int argc, char** argv) {
 	
 	return 0;
 }
+
 void load_lp_file(dictionary *dict) {
 	FILE* in;
 	
