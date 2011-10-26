@@ -13,6 +13,7 @@
 // Project Includes
 #include "dictionary.h"
 #include "input.h"
+#include "kernels.h"
 #include "util.h"
 
 // Globals
@@ -21,8 +22,7 @@ config cfg;
 
 // Forward Declarations
 
-void load_lp_file(dictionary *dict)
-void pivot_kernel(dictionary* dict);
+static void load_lp_file(dictionary *dict)
 
 // Functions
 
@@ -36,6 +36,9 @@ int main(int argc, char** argv) {
 		dictionary_view(&dict);
 	}
 	
+	// Initialize the dictionary proper.
+	dictionary_init(&dict);
+	
 	switch (cfg.method) {
 		case PIVOT:
 		default:
@@ -46,7 +49,7 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
-void load_lp_file(dictionary *dict) {
+static void load_lp_file(dictionary *dict) {
 	FILE* in;
 	
 	if ((in = fopen(cfg.filename, "rt")) != NULL) {
@@ -68,8 +71,4 @@ void load_lp_file(dictionary *dict) {
 		printf("Can't open file %s\n", cfg.filename);
 		exit(-1);
 	}
-}
-
-void pivot_kernel(dictionary* dict) {
-	
 }
