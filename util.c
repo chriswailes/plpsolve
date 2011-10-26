@@ -78,7 +78,8 @@ static inline bool check_option(char* opt, char* lng, char* srt) {
 }
 
 static inline void init_config(void) {
-	cfg.pmode	= NONE;
+	cfg.method	= PIVOT;
+	cfg.pmode		= NONE;
 	cfg.verbose	= FALSE;
 }
 

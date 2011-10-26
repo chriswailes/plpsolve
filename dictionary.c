@@ -29,6 +29,10 @@ void dictionary_init_struct(dictionary* dict) {
 	dict->var_bounds.lower = (double*)malloc(dict->num_vars * sizeof(double));
 }
 
+bool dictionary_is_final(dictionary* dict) {
+	
+}
+
 void dictionary_pivot(dictionary* dict) {
 	
 }

@@ -15,6 +15,10 @@ typedef enum {
 } bool;
 
 typedef enum {
+	PIVOT
+} method_t;
+
+typedef enum {
 	NONE = 0,
 	MP,
 	PTHREADS,
@@ -24,6 +28,7 @@ typedef enum {
 typedef struct {
 	char* filename;
 	
+	method_t method;
 	pmode_t pmode;
 	
 	bool verbose;

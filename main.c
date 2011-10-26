@@ -19,6 +19,10 @@
 
 config cfg;
 
+// Forward Declarations
+
+void pivot_kernel(dictionary* dict);
+
 // Functions
 
 int main(int argc, char** argv) {
@@ -47,32 +51,41 @@ int main(int argc, char** argv) {
 		// Close the input file.
 		fclose(in);
 		
-		printf("Objective coefficients:\n");
-		for (i = 0; i < dict.num_vars; ++i) {
-			printf("%g  ", dict.objective[i]);
-		}
-		printf("\n\n");
-		
-		printf("Matrix:\n");
-		for (j = 0; j < dict.num_cons; ++j) {
+		if (cfg.verbose) {
+			printf("Objective coefficients:\n");
 			for (i = 0; i < dict.num_vars; ++i) {
-				printf("%5.3g", dict.matrix[i + j * dict.num_vars]);
+				printf("%g  ", dict.objective[i]);
 			}
-			printf("\n");
+			printf("\n\n");
+			
+			printf("Matrix:\n");
+			for (j = 0; j < dict.num_cons; ++j) {
+				for (i = 0; i < dict.num_vars; ++i) {
+					printf("%5.3g", dict.matrix[i + j * dict.num_vars]);
+				}
+				printf("\n");
+			}
+			printf("\n\n");
+			
+			printf("Constraint bounds:\n");
+			for (i = 0; i < dict.num_cons; ++i) {
+				printf("(%4.3g, %4.3g) ", dict.con_bounds.lower[i], dict.con_bounds.upper[i]);
+			}
+			printf("\n\n");
+			
+			printf("Variable bounds:\n");
+			for (i = 0; i < dict.num_vars; ++i) {
+				printf("(%4.3g, %4.3g) ", dict.var_bounds.lower[i], dict.var_bounds.upper[i]);
+			}
+			printf("\n\n");
 		}
-		printf("\n\n");
 		
-		printf("Constraint bounds:\n");
-		for (i = 0; i < dict.num_cons; ++i) {
-			printf("(%4.3g, %4.3g) ", dict.con_bounds.lower[i], dict.con_bounds.upper[i]);
+		switch (cfg.method) {
+			case PIVOT:
+			default:
+				pivot_kernel(&dict);
+				break;
 		}
-		printf("\n\n");
-		
-		printf("Variable bounds:\n");
-		for (i = 0; i < dict.num_vars; ++i) {
-			printf("(%4.3g, %4.3g) ", dict.var_bounds.lower[i], dict.var_bounds.upper[i]);
-		}
-		printf("\n\n");
 		
 		return 0;
 		
@@ -81,4 +94,8 @@ int main(int argc, char** argv) {
 		return -1;
 		
 	}
+}
+
+void pivot_kernel(dictionary* dict) {
+	
 }
