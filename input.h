@@ -6,12 +6,15 @@
  * Description:	Header file for input manipulation.
  */
 
+// Project Includes
+#include "dictionary.h"
+
 #ifndef INPUT_H
 #define INPUT_H
 
-void load_constraint_bounds(FILE* in, unsigned num_constraints, double* target_lower, double* target_upper);
-void load_matrix(FILE* in, unsigned num_variables, unsigned num_constraints, double* target);
-void load_objective(FILE* in, unsigned num_variables, double* target);
-void load_var_bounds(FILE* in, unsigned num_variables, double* target_lower, double* target_upper);
+void load_constraint_bounds(FILE* in, dictionary* dict);
+void load_matrix(FILE* in, dictionary* dict);
+void load_objective(FILE* in, dictionary* dict);
+void load_var_bounds(FILE* in, dictionary* dict);
 
 #endif

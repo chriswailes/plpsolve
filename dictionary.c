@@ -11,3 +11,24 @@
 
 // Project Includes
 #include "dictionary.h"
+
+// Functions
+
+void dictionary_init(dictionary* dict) {
+	
+}
+
+void dictionary_init_struct(dictionary* dict) {
+	dict->objective	= (double*)malloc(dict->num_vars * sizeof(double));
+	dict-> matrix		= (double*)malloc(dict->num_vars * dict->num_cons * sizeof(double));
+	
+	dict->con_bounds.upper = (double*)malloc(dict->num_cons * sizeof(double));
+	dict->con_bounds.lower = (double*)malloc(dict->num_cons * sizeof(double));
+	
+	dict->var_bounds.upper = (double*)malloc(dict->num_vars * sizeof(double));
+	dict->var_bounds.lower = (double*)malloc(dict->num_vars * sizeof(double));
+}
+
+void dictionary_pivot(dictionary* dict) {
+	
+}

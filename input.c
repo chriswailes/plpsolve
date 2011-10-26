@@ -6,74 +6,76 @@
  * Description:	Functions for dealing with files in the input format.
  */
 
-// Project Includes
+// Standard Includes
 #include <stdio.h>
 #include <stdlib.h>
 
+// Project Includes
+#include "dictionary.h"
 #include "input.h"
 
-void load_constraint_bounds(FILE* in, unsigned num_constraints, double* target_lower, double* target_upper) {
+void load_constraint_bounds(FILE* in, dictionary* dict) {
 	unsigned i;
 
-	for (i = 0; i < num_constraints; ++i) {
+	for (i = 0; i < dict->num_cons; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &target_lower[i]);
+			fscanf(in, ", %lf", &dict->con_bounds.lower[i]);
 		else
-			fscanf(in, "%lf", &target_lower[i]);
+			fscanf(in, "%lf", &dict->con_bounds.lower[i]);
 	}
 	fscanf(in, "\n");
 
-	for (i = 0; i < num_constraints; ++i) {
+	for (i = 0; i < dict->num_cons; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &target_upper[i]);
+			fscanf(in, ", %lf", &dict->con_bounds.upper[i]);
 		else
-			fscanf(in, "%lf", &target_upper[i]);
+			fscanf(in, "%lf", &dict->con_bounds.upper[i]);
 	}
 	fscanf(in, "\n");
 }
 
-void load_matrix(FILE* in, unsigned num_variables, unsigned num_constraints, double* target) {
+void load_matrix(FILE* in, dictionary* dict) {
 	unsigned i, j;
 	
-	for (j = 0; j < num_constraints; ++j) {
-		for (i = 0; i < num_variables; ++i) {
+	for (j = 0; j < dict->num_cons; ++j) {
+		for (i = 0; i < dict->num_vars; ++i) {
 			if (i)
-				fscanf(in, ", %lf", &target[i + j * num_variables]);
+				fscanf(in, ", %lf", &dict->matrix[i + j * dict->num_vars]);
 			else
-				fscanf(in, "%lf", &target[i + j * num_variables]);
+				fscanf(in, "%lf", &dict->matrix[i + j * dict->num_vars]);
 		}
 	}
 	fscanf(in, "\n");
 }
 
-void load_objective(FILE* in, unsigned num_variables, double* target) {
+void load_objective(FILE* in, dictionary* dict) {
 	unsigned i;
 	
-	for (i = 0; i < num_variables; ++i) {
+	for (i = 0; i < dict->num_vars; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &target[i]);
+			fscanf(in, ", %lf", &dict->objective[i]);
 		else
-			fscanf(in, "%lf", &target[i]);
+			fscanf(in, "%lf", &dict->objective[i]);
 	}
 	fscanf(in, "\n");
 }
 
-void load_var_bounds(FILE* in, unsigned num_variables, double* target_lower, double* target_upper) {
+void load_var_bounds(FILE* in, dictionary* dict) {
 	unsigned i;
 	
-	for (i = 0; i < num_variables; ++i) {
+	for (i = 0; i < dict->num_vars; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &target_lower[i]);
+			fscanf(in, ", %lf", &dict->var_bounds.lower[i]);
 		else
-			fscanf(in, "%lf", &target_lower[i]);
+			fscanf(in, "%lf", &dict->var_bounds.lower[i]);
 	}
 	fscanf(in, "\n");
 
-	for (i = 0; i < num_variables; ++i) {
+	for (i = 0; i < dict->num_vars; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &target_upper[i]);
+			fscanf(in, ", %lf", &dict->var_bounds.upper[i]);
 		else
-			fscanf(in, "%lf", &target_upper[i]);
+			fscanf(in, "%lf", &dict->var_bounds.upper[i]);
 	}
 	fscanf(in, "\n");
 }
