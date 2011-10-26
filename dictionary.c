@@ -48,7 +48,15 @@ void dictionary_init_struct(dictionary* dict) {
 }
 
 bool dictionary_is_final(dictionary* dict) {
+	int index;
 	
+	for (index = 0; index < dict->num_vars; ++index) {
+		if ((dict->objective[index] < 0 && dict->var_rests == UPPER) || (dict->objective[index] > 0 && dict->var_rests == LOWER)) {
+			return FALSE;
+		}
+	}
+	
+	return TRUE;
 }
 
 void dictionary_pivot(dictionary* dict) {
