@@ -20,33 +20,41 @@
 config cfg;
 
 // Functions
-
-int main(int argc, char** argv) {
+int load_lp_file(const char *filename, dictionary *dict) {
 	FILE* in;
-	unsigned int i, j;
-	
-	dictionary dict;
-	
-	get_config(argc, argv);
-	
 	if ((in = fopen(cfg.filename, "rt")) != NULL) {
 		
-		fscanf(in, "%i,%i\n", &dict.num_cons, &dict.num_vars);
-		printf("Num constraints: %d\n", dict.num_cons);
-		printf("Num variables: %d\n\n", dict.num_vars);
+		fscanf(in, "%i,%i\n", &dict->num_cons, &dict->num_vars);
+		printf("Num constraints: %d\n", dict->num_cons);
+		printf("Num variables: %d\n\n", dict->num_vars);
 		
 		// Initialize our dictionary struct.
-		dictionary_init_struct(&dict);
+		dictionary_init_struct(dict);
 		
 		// Load values from input file.
-		load_objective(in, &dict);
-		load_matrix(in, &dict);
-		load_constraint_bounds(in, &dict);
-		load_var_bounds(in, &dict);
+		load_objective(in, dict);
+		load_matrix(in, dict);
+		load_constraint_bounds(in, dict);
+		load_var_bounds(in, dict);
 		
 		// Close the input file.
 		fclose(in);
 		
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
+
+int main(int argc, char** argv) {
+	unsigned int i, j;
+
+	dictionary dict;
+
+	get_config(argc, argv);
+
+	if (load_lp_file(cfg.filename, &dict)) {
 		printf("Objective coefficients:\n");
 		for (i = 0; i < dict.num_vars; ++i) {
 			printf("%g  ", dict.objective[i]);
