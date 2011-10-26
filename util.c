@@ -66,7 +66,7 @@ void get_config(int argc, char** argv) {
 	
 	if (access(argv[argc - 1], R_OK) != 0) {
 		printf("Can't read file %s\n", argv[argc - 1]);
-		exit(0);
+		exit(-1);
 		
 	} else {
 		cfg.filename = argv[argc - 1];

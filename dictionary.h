@@ -28,5 +28,6 @@ void dictionary_init(dictionary* dict);
 void dictionary_init_struct(dictionary* dict);
 bool dictionary_is_final(dictionary* dict);
 void dictionary_pivot(dictionary* dict);
+void dictionary_view(const dictionary* dict);
 
 #endif
