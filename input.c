@@ -12,21 +12,27 @@
 
 #include "input.h"
 
-int load_objective(FILE* in, unsigned num_variables, double* target) {
+void load_constraint_bounds(FILE* in, unsigned num_constraints, double* target_lower, double* target_upper) {
 	unsigned i;
-	
-	for (i = 0; i < num_variables; ++i) {
+
+	for (i = 0; i < num_constraints; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &target[i]);
+			fscanf(in, ", %lf", &target_lower[i]);
 		else
-			fscanf(in, "%lf", &target[i]);
+			fscanf(in, "%lf", &target_lower[i]);
 	}
 	fscanf(in, "\n");
 
-	return 0;
+	for (i = 0; i < num_constraints; ++i) {
+		if (i)
+			fscanf(in, ", %lf", &target_upper[i]);
+		else
+			fscanf(in, "%lf", &target_upper[i]);
+	}
+	fscanf(in, "\n");
 }
 
-int load_matrix(FILE* in, unsigned num_variables, unsigned num_constraints, double* target) {
+void load_matrix(FILE* in, unsigned num_variables, unsigned num_constraints, double* target) {
 	unsigned i, j;
 	
 	for (j = 0; j < num_constraints; ++j) {
@@ -38,33 +44,21 @@ int load_matrix(FILE* in, unsigned num_variables, unsigned num_constraints, doub
 		}
 	}
 	fscanf(in, "\n");
-
-	return 0;
 }
 
-int load_constraint_bounds(FILE* in, unsigned num_constraints, double* target_lower, double* target_upper) {
+void load_objective(FILE* in, unsigned num_variables, double* target) {
 	unsigned i;
-
-	for (i = 0; i < num_constraints; ++i) {
+	
+	for (i = 0; i < num_variables; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &target_lower[i]);
+			fscanf(in, ", %lf", &target[i]);
 		else
-			fscanf(in, "%lf", &target_lower[i]);
+			fscanf(in, "%lf", &target[i]);
 	}
 	fscanf(in, "\n");
-
-	for (i = 0; i < num_constraints; ++i) {
-		if (i)
-			fscanf(in, ", %lf", &target_upper[i]);
-		else
-			fscanf(in, "%lf", &target_upper[i]);
-	}
-	fscanf(in, "\n");
-
-	return 0;
 }
 
-int load_var_bounds(FILE* in, unsigned num_variables, double* target_lower, double* target_upper) {
+void load_var_bounds(FILE* in, unsigned num_variables, double* target_lower, double* target_upper) {
 	unsigned i;
 	
 	for (i = 0; i < num_variables; ++i) {
@@ -82,6 +76,4 @@ int load_var_bounds(FILE* in, unsigned num_variables, double* target_lower, doub
 			fscanf(in, "%lf", &target_upper[i]);
 	}
 	fscanf(in, "\n");
-
-	return 0;
 }
