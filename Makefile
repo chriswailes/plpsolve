@@ -8,13 +8,15 @@ CC		= gcc
 CFLAGS	= -Wall -O3
 LFLAGS	=
 
-SOURCE	= dictionary.c input.c main.c
+PROGRAM	= superlp
+
+SOURCE	= dictionary.c input.c main.c util.c
 EXECS	= main
 
 all: main
 
 main: $(SOURCE)
-	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(SOURCE)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $(PROGRAM) $(SOURCE)
 
 .PHONY: clean
 clean:
