@@ -48,45 +48,15 @@ int load_lp_file(const char *filename, dictionary *dict) {
 }
 
 int main(int argc, char** argv) {
-	unsigned int i, j;
-
 	dictionary dict;
 
 	get_config(argc, argv);
 
 	if (load_lp_file(cfg.filename, &dict)) {
-		printf("Objective coefficients:\n");
-		for (i = 0; i < dict.num_vars; ++i) {
-			printf("%g  ", dict.objective[i]);
-		}
-		printf("\n\n");
-		
-		printf("Matrix:\n");
-		for (j = 0; j < dict.num_cons; ++j) {
-			for (i = 0; i < dict.num_vars; ++i) {
-				printf("%5.3g", dict.matrix[i + j * dict.num_vars]);
-			}
-			printf("\n");
-		}
-		printf("\n\n");
-		
-		printf("Constraint bounds:\n");
-		for (i = 0; i < dict.num_cons; ++i) {
-			printf("(%4.3g, %4.3g) ", dict.con_bounds.lower[i], dict.con_bounds.upper[i]);
-		}
-		printf("\n\n");
-		
-		printf("Variable bounds:\n");
-		for (i = 0; i < dict.num_vars; ++i) {
-			printf("(%4.3g, %4.3g) ", dict.var_bounds.lower[i], dict.var_bounds.upper[i]);
-		}
-		printf("\n\n");
-		
+		dictionary_view(&dict);
 		return 0;
-		
 	} else {
 		printf("File %s not found\n", argv[1]);
 		return -1;
-		
 	}
 }

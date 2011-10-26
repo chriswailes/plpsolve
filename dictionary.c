@@ -8,6 +8,7 @@
 
 // Standard Incldues
 #include <stdlib.h>
+#include <stdio.h>
 
 // Project Includes
 #include "dictionary.h"
@@ -31,4 +32,35 @@ void dictionary_init_struct(dictionary* dict) {
 
 void dictionary_pivot(dictionary* dict) {
 	
+}
+
+void dictionary_view(const dictionary* dict) {
+	unsigned int i, j;
+
+	printf("Objective coefficients:\n");
+	for (i = 0; i < dict->num_vars; ++i) {
+		printf("%g  ", dict->objective[i]);
+	}
+	printf("\n\n");
+
+	printf("Matrix:\n");
+	for (j = 0; j < dict->num_cons; ++j) {
+		for (i = 0; i < dict->num_vars; ++i) {
+			printf("%5.3g", dict->matrix[i + j * dict->num_vars]);
+		}
+		printf("\n");
+	}
+	printf("\n\n");
+
+	printf("Constraint bounds:\n");
+	for (i = 0; i < dict->num_cons; ++i) {
+		printf("(%4.3g, %4.3g) ", dict->con_bounds.lower[i], dict->con_bounds.upper[i]);
+	}
+	printf("\n\n");
+
+	printf("Variable bounds:\n");
+	for (i = 0; i < dict->num_vars; ++i) {
+		printf("(%4.3g, %4.3g) ", dict->var_bounds.lower[i], dict->var_bounds.upper[i]);
+	}
+	printf("\n\n");
 }
