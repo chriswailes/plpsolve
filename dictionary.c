@@ -20,6 +20,12 @@ void dictionary_init(dictionary* dict) {
 }
 
 void dictionary_init_struct(dictionary* dict) {
+	int index;
+	
+	/*
+	 * Allocate the necessary memory.
+	 */
+	
 	dict->objective	= (double*)malloc(dict->num_vars * sizeof(double));
 	dict-> matrix		= (double*)malloc(dict->num_vars * dict->num_cons * sizeof(double));
 	
@@ -28,6 +34,17 @@ void dictionary_init_struct(dictionary* dict) {
 	
 	dict->var_bounds.upper = (double*)malloc(dict->num_vars * sizeof(double));
 	dict->var_bounds.lower = (double*)malloc(dict->num_vars * sizeof(double));
+	
+	dict->var_rests = (rest_t*)malloc(dict->num_vars * sizeof(rest_t));
+	
+	// Pick the initial resting bounds for the variables.
+	for (index = 0; index < dict->num_vars; ++index) {
+		if (dict->objective[index] >= 0) {
+			dict->var_rests[index] = UPPER;
+		} else {
+			dict->var_rests[index] = LOWER;
+		}
+	}
 }
 
 bool dictionary_is_final(dictionary* dict) {

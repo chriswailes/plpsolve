@@ -9,10 +9,15 @@
 #ifndef DICTIONARY_H
 #define DICTIONARY_H
 
+typedef enum {
+	LOWER,
+	UPPER
+} rest_t;
+
 typedef struct {
 	double* upper;
 	double* lower;
-} bounds_s;
+} bounds_t;
 
 typedef struct {
 	int num_vars, num_cons;
@@ -20,8 +25,10 @@ typedef struct {
 	double* objective;
 	double* matrix;
 	
-	bounds_s con_bounds;
-	bounds_s var_bounds; 
+	bounds_t con_bounds;
+	bounds_t var_bounds;
+	
+	rest_t* var_rests;
 } dictionary;
 
 void dictionary_init(dictionary* dict);
