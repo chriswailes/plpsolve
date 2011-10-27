@@ -13,6 +13,7 @@
 // Project Includes
 #include "dictionary.h"
 #include "input.h"
+#include "util.h"
 
 void load_constraint_bounds(FILE* in, dictionary* dict) {
 	unsigned i;

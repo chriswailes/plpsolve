@@ -43,7 +43,7 @@ void get_config(int argc, char** argv) {
 	for (index = 1; index < argc; ++index) {
 		
 		// Default Options
-		if (check_option(argv[index], "--verbose", "--v")) {
+		if (check_option(argv[index], "--verbose", "-v")) {
 			cfg.verbose = TRUE;
 			
 		} else if (check_option(argv[index], "--help", "-h")) {

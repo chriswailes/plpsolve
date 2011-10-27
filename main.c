@@ -22,7 +22,7 @@ config cfg;
 
 // Forward Declarations
 
-static void load_lp_file(dictionary *dict)
+static void load_lp_file(dictionary* dict);
 
 // Functions
 
@@ -45,6 +45,8 @@ int main(int argc, char** argv) {
 			pivot_kernel(&dict);
 			break;
 	}
+	
+	dictionary_free(&dict);
 	
 	return 0;
 }
