@@ -91,7 +91,7 @@ bool dictionary_is_final(dictionary* dict) {
 /*
  * Pivots a dictionary around the given column and row.
  * 
- * The col_idx corresponds with the entering variable, and the row_idx
+ * The col_index corresponds with the entering variable, and the row_index
  * corresponds with the leaving variable.
  * 
  * Starts with (1):
@@ -113,11 +113,11 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	tmp_row = (double*)malloc(dict->num_vars * sizeof(double));
 	
 	// Copy the pivot row.
-	memcpy(tmp_row, &dict->matrix[row_index * dict->num_vars], dict->num_vars);
+	memcpy(tmp_row, &dict->matrix[row_index * dict->num_vars], dict->num_vars * sizeof(double));
 	
 	// Grab the coefficient from the pivot column, and then replace it.
 	coefficient = -tmp_row[col_index];
-	tmp_row[col_index] = 1.0;
+	tmp_row[col_index] = -1.0;
 	
 	// Divide the vector by the coefficient, converting to form 3.
 	for (index0 = 0; index0 < dict->num_vars; ++index0) {
@@ -125,7 +125,7 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	}
 	
 	// Replace old row with new row.
-	memcpy(&dict->matrix[row_index * dict->num_vars], tmp_row, dict->num_vars);
+	memcpy(&dict->matrix[row_index * dict->num_vars], tmp_row, dict->num_vars * sizeof(double));
 	
 	// Substitute new rows into old rows in the matrix.
 	for (index0 = 0; index0 < dict->num_cons; ++index0) {
@@ -134,7 +134,7 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 			
 			for (index1 = 0; index1 < dict->num_vars; ++index1) {
 				if (index1 == col_index) {
-					dict->matrix[(index0 * dict->num_vars) + index1]  = tmp_row[index1];
+					dict->matrix[(index0 * dict->num_vars) + index1]  = coefficient * tmp_row[index1];
 					
 				} else {
 					dict->matrix[(index0 * dict->num_vars) + index1] += coefficient * tmp_row[index1];
