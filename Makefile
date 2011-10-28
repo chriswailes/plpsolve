@@ -11,11 +11,11 @@ LFLAGS	=
 PROGRAM	= superlp
 
 SOURCE	= dictionary.c input.c kernels.c main.c util.c
-EXECS	= main
+EXECS	= superlp
 
-all: main
+all: $(EXECS)
 
-main: $(SOURCE)
+superlp: $(SOURCE)
 	$(CC) $(CFLAGS) $(LFLAGS) -o $(PROGRAM) $(SOURCE)
 
 .PHONY: clean
