@@ -32,6 +32,7 @@ typedef struct {
 	pmode_t pmode;
 	
 	bool verbose;
+	char* mathprog_filename;
 } config;
 
 void get_config(int argc, char** argv);

@@ -61,6 +61,10 @@ void get_config(int argc, char** argv) {
 			} else if (strncmp(argv[index + 1], "gpu", 3) == 0) {
 				cfg.pmode = GPU;
 			}
+			++index;
+		} else if (check_option(argv[index], "--mathprog", "-m")) {
+			cfg.mathprog_filename = argv[index + 1];
+			++index;
 		}
 	}
 	
@@ -81,6 +85,7 @@ static inline void init_config(void) {
 	cfg.method	= PIVOT;
 	cfg.pmode		= NONE;
 	cfg.verbose	= FALSE;
+	cfg.mathprog_filename = 0;
 }
 
 static inline void print_help(void) {
@@ -90,6 +95,9 @@ static inline void print_help(void) {
 	//Help for Project options.
 	print_help_item("parallel", "p", "Specifies parallelism mode.  Must be mp, pthreads, gpu, or none.");
 	
+	// Help for Debug outputs.
+	print_help_item("mathprog", "m", "Outputs mathprog compatible file.  Must specify filename.");
+
 	// Help for Default options.
 	print_help_item("verbose", "v", "Be verbose.");
 	print_help_item("help", "h", "Print this message.");
