@@ -23,6 +23,16 @@ typedef struct {
 } bounds_t;
 
 typedef struct {
+	int infeasible_row;
+	int infeasible_amount;
+} infeasible_row_t;
+
+typedef struct {
+	infeasible_row_t *infeasible_rows;
+	unsigned num_infeasible_rows;
+} infeasible_set_t;
+
+typedef struct {
 	int num_vars, num_cons;
 	
 	double* objective;

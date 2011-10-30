@@ -32,6 +32,55 @@ void dictionary_free(dictionary* dict) {
 	free(dict->var_rests);
 }
 
+infeasible_set_t dictionary_infeasible_rows(dictionary *dict) {
+	//This can be done a little less naively, but do it naively for now
+	int i, j;
+	infeasible_set_t infeasible_set;
+	infeasible_set.infeasible_rows = 0;
+	infeasible_set.num_infeasible_rows = 0;
+
+	for (j = 0; j < dict->num_cons; ++j) {
+		float constraint_sum = 0.0;
+		for (i = 0; i < dict->num_vars; ++i) {
+			switch (dict->var_rests[i]) {
+			case UPPER:
+				constraint_sum += dict->matrix[i + j * dict->num_vars] * dict->var_bounds.upper[i];
+				break;
+			case LOWER:
+				constraint_sum += dict->matrix[i + j * dict->num_vars] * dict->var_bounds.lower[i];
+				break;
+			}
+		}
+		if ((constraint_sum < dict->con_bounds.lower[j]) ||
+				(constraint_sum > dict->con_bounds.upper[j])) {
+
+			//add infeasible
+			++infeasible_set.num_infeasible_rows;
+			if (infeasible_set.num_infeasible_rows) {
+				infeasible_set.infeasible_rows = realloc(infeasible_set.infeasible_rows,
+						infeasible_set.num_infeasible_rows * sizeof(infeasible_row_t));
+			}
+			else {
+				infeasible_set.infeasible_rows = malloc(infeasible_set.num_infeasible_rows *
+						sizeof(infeasible_row_t));
+			}
+
+			if (constraint_sum < dict->con_bounds.lower[j]) {
+				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_row = j;
+				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_amount =
+						dict->con_bounds.lower[j] - constraint_sum;
+			}
+			else if (constraint_sum > dict->con_bounds.upper[j]) {
+				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_row = j;
+				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_amount =
+						dict->con_bounds.upper[j] - constraint_sum;
+			}
+		}
+	}
+
+	return infeasible_set;
+}
+
 void dictionary_init(dictionary* dict) {
 	
 }
