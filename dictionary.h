@@ -50,6 +50,8 @@ typedef struct {
 } dictionary;
 
 void dictionary_free(dictionary* dict);
+infeasible_set_t dictionary_infeasible_rows(dictionary *dict);
+void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons);
 void dictionary_init(dictionary* dict);
 void dictionary_init_struct(dictionary* dict);
 bool dictionary_is_final(dictionary* dict);

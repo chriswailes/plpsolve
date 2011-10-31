@@ -81,8 +81,76 @@ infeasible_set_t dictionary_infeasible_rows(dictionary *dict) {
 	return infeasible_set;
 }
 
+int min_int(int left, int right) {
+	if (right < left)
+		return right;
+	else
+		return left;
+}
+
+void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons) {
+	//In case we want to snapshot the previous pointers, don't realloc them.
+	//Instead, just create a new dictionary and replace the pointers.
+
+	double *new_objective = malloc(sizeof(double) * new_num_vars);
+	memcpy(new_objective, dict->objective, sizeof(double) * min_int(new_num_vars, dict->num_vars));
+	dict->objective = new_objective;
+
+	int *new_col_labels = malloc(sizeof(int) * new_num_vars);
+	memcpy(new_col_labels, dict->col_labels, sizeof(int) * min_int(new_num_vars, dict->num_vars));
+	dict->col_labels = new_col_labels;
+
+	rest_t* new_var_rests = malloc(sizeof(rest_t) * new_num_vars);
+	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * min_int(new_num_vars, dict->num_vars));
+	dict->var_rests = new_var_rests;
+
+	bounds_t new_var_bounds;
+	new_var_bounds.lower = malloc(sizeof(double) * new_num_vars);
+	new_var_bounds.upper = malloc(sizeof(double) * new_num_vars);
+	memcpy(new_var_bounds.lower, dict->var_bounds.lower, sizeof(double) *
+			min_int(new_num_vars, dict->num_vars));
+	memcpy(new_var_bounds.upper, dict->var_bounds.upper, sizeof(double) *
+			min_int(new_num_vars, dict->num_vars));
+	dict->var_bounds = new_var_bounds;
+
+	int *new_row_labels = malloc(sizeof(int) * new_num_cons);
+	memcpy(new_row_labels, dict->row_labels, sizeof(int) * min_int(new_num_cons, dict->num_cons));
+	dict->row_labels = new_row_labels;
+
+	bounds_t new_con_bounds;
+	new_con_bounds.lower = malloc(sizeof(double) * new_num_cons);
+	new_con_bounds.upper = malloc(sizeof(double) * new_num_cons);
+	memcpy(new_con_bounds.lower, dict->con_bounds.lower, sizeof(double) *
+			min_int(new_num_cons, dict->num_cons));
+	memcpy(new_con_bounds.upper, dict->con_bounds.upper, sizeof(double) *
+			min_int(new_num_cons, dict->num_cons));
+	dict->con_bounds = new_con_bounds;
+
+	double* new_matrix = malloc(sizeof(double) * new_num_vars * new_num_cons);
+	memset (new_matrix, 0, sizeof(double) * new_num_vars * new_num_cons);
+	int i;
+	for (i = 0; i < min_int(dict->num_cons, new_num_cons); ++i) {
+		memcpy(new_matrix + i * new_num_vars, dict->matrix + i * dict->num_vars,
+				min_int(new_num_vars, dict->num_vars));
+	}
+	dict->matrix = new_matrix;
+
+	dict->num_cons = new_num_cons;
+	dict->num_vars = new_num_vars;
+}
+
 void dictionary_init(dictionary* dict) {
+	infeasible_set_t infeasible = dictionary_infeasible_rows(dict);
 	
+	if (infeasible.num_infeasible_rows) {
+		// perform initialization
+		dictionary_resize(dict, dict->num_vars + infeasible.num_infeasible_rows,
+				dict->num_cons);
+	}
+	else {
+		// dictionary is feasible, return
+		return;
+	}
 }
 
 void dictionary_init_struct(dictionary* dict) {
