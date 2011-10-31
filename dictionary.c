@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 // Project Includes
 #include "dictionary.h"
@@ -40,7 +41,7 @@ infeasible_set_t dictionary_infeasible_rows(dictionary *dict) {
 	infeasible_set.num_infeasible_rows = 0;
 
 	for (j = 0; j < dict->num_cons; ++j) {
-		float constraint_sum = 0.0;
+		double constraint_sum = 0.0;
 		for (i = 0; i < dict->num_vars; ++i) {
 			switch (dict->var_rests[i]) {
 			case UPPER:
@@ -93,20 +94,27 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 	//Instead, just create a new dictionary and replace the pointers.
 
 	double *new_objective = malloc(sizeof(double) * new_num_vars);
+	memset(new_objective, 0, sizeof(double) * new_num_vars);
 	memcpy(new_objective, dict->objective, sizeof(double) * min_int(new_num_vars, dict->num_vars));
 	dict->objective = new_objective;
 
 	int *new_col_labels = malloc(sizeof(int) * new_num_vars);
+	memset(new_col_labels, 0, sizeof(int) * new_num_vars);
 	memcpy(new_col_labels, dict->col_labels, sizeof(int) * min_int(new_num_vars, dict->num_vars));
 	dict->col_labels = new_col_labels;
 
 	rest_t* new_var_rests = malloc(sizeof(rest_t) * new_num_vars);
+	memset(new_var_rests, 0, sizeof(rest_t) * new_num_vars);
 	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * min_int(new_num_vars, dict->num_vars));
 	dict->var_rests = new_var_rests;
 
 	bounds_t new_var_bounds;
 	new_var_bounds.lower = malloc(sizeof(double) * new_num_vars);
+	memset(new_var_bounds.lower, 0, (sizeof(double) * new_num_vars));
+
 	new_var_bounds.upper = malloc(sizeof(double) * new_num_vars);
+	memset(new_var_bounds.upper, 0, (sizeof(double) * new_num_vars));
+
 	memcpy(new_var_bounds.lower, dict->var_bounds.lower, sizeof(double) *
 			min_int(new_num_vars, dict->num_vars));
 	memcpy(new_var_bounds.upper, dict->var_bounds.upper, sizeof(double) *
@@ -114,12 +122,17 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 	dict->var_bounds = new_var_bounds;
 
 	int *new_row_labels = malloc(sizeof(int) * new_num_cons);
+	memset(new_row_labels, 0, (sizeof(int) * new_num_cons));
 	memcpy(new_row_labels, dict->row_labels, sizeof(int) * min_int(new_num_cons, dict->num_cons));
 	dict->row_labels = new_row_labels;
 
 	bounds_t new_con_bounds;
 	new_con_bounds.lower = malloc(sizeof(double) * new_num_cons);
+	memset(new_con_bounds.lower, 0, (sizeof(double) * new_num_cons));
+
 	new_con_bounds.upper = malloc(sizeof(double) * new_num_cons);
+	memset(new_con_bounds.upper, 0, (sizeof(double) * new_num_cons));
+
 	memcpy(new_con_bounds.lower, dict->con_bounds.lower, sizeof(double) *
 			min_int(new_num_cons, dict->num_cons));
 	memcpy(new_con_bounds.upper, dict->con_bounds.upper, sizeof(double) *
@@ -128,11 +141,13 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 
 	double* new_matrix = malloc(sizeof(double) * new_num_vars * new_num_cons);
 	memset (new_matrix, 0, sizeof(double) * new_num_vars * new_num_cons);
+
 	int i;
 	for (i = 0; i < min_int(dict->num_cons, new_num_cons); ++i) {
 		memcpy(new_matrix + i * new_num_vars, dict->matrix + i * dict->num_vars,
-				min_int(new_num_vars, dict->num_vars));
+				sizeof(double) * min_int(new_num_vars, dict->num_vars));
 	}
+
 	dict->matrix = new_matrix;
 
 	dict->num_cons = new_num_cons;
@@ -144,8 +159,47 @@ void dictionary_init(dictionary* dict) {
 	
 	if (infeasible.num_infeasible_rows) {
 		// perform initialization
+		double *old_objective = dict->objective;
+		int old_num_vars = dict->num_vars;
+		int old_num_cons = dict->num_cons;
+
+		printf("Number infeasible rows: %i\n", infeasible.num_infeasible_rows);
+		int i;
+		for (i = 0; i < infeasible.num_infeasible_rows; ++i) {
+			printf("  row: %i by %f\n", infeasible.infeasible_rows[i].infeasible_row,
+					infeasible.infeasible_rows[i].infeasible_amount);
+		}
+		dictionary_view(dict);
+
 		dictionary_resize(dict, dict->num_vars + infeasible.num_infeasible_rows,
 				dict->num_cons);
+
+		for (i = 0; i < old_num_vars; ++i) {
+			dict->objective[i] = 0;
+		}
+		for (i = 0; i < infeasible.num_infeasible_rows; ++i) {
+			dict->objective[i + old_num_vars] = -1;
+			dict->var_bounds.lower[i + old_num_vars] = 0;
+			dict->col_labels[old_num_vars + i] = 1 + i + (dict->num_vars - infeasible.num_infeasible_rows) + dict->num_cons;
+			if (infeasible.infeasible_rows[i].infeasible_amount < 0) {
+				dict->var_bounds.upper[i + old_num_vars] = infeasible.infeasible_rows[i].infeasible_amount * -1;
+
+				//FIXME: During shrinking this can segfault
+				dict->matrix[infeasible.infeasible_rows[i].infeasible_row * dict->num_vars + old_num_vars + i] = -1;
+			}
+			else {
+				dict->var_bounds.upper[i + old_num_vars] = infeasible.infeasible_rows[i].infeasible_amount;
+				dict->matrix[infeasible.infeasible_rows[i].infeasible_row * dict->num_vars + old_num_vars + i] = 1;
+			}
+		}
+
+		dictionary_view(dict);
+
+		dictionary_resize(dict, old_num_vars, old_num_cons);
+		dict->objective = old_objective;
+
+		printf("Resetting to original dictionary\n");
+		dictionary_view(dict);
 	}
 	else {
 		// dictionary is feasible, return
@@ -181,15 +235,6 @@ void dictionary_init_struct(dictionary* dict) {
 	
 	for (index = 1; index <= dict->num_cons; ++index) {
 		dict->row_labels[index - 1] = dict->num_vars + index;
-	}
-	
-	// Pick the initial resting bounds for the variables.
-	for (index = 0; index < dict->num_vars; ++index) {
-		if (dict->objective[index] >= 0) {
-			dict->var_rests[index] = UPPER;
-		} else {
-			dict->var_rests[index] = LOWER;
-		}
 	}
 }
 
@@ -327,7 +372,20 @@ void dictionary_view(const dictionary* dict) {
 
 	printf("Variable bounds:\n");
 	for (i = 0; i < dict->num_vars; ++i) {
-		printf("(%4.3g, %4.3g) ", dict->var_bounds.lower[i], dict->var_bounds.upper[i]);
+
+		printf("(");
+		if (dict->var_rests[i] == LOWER)
+			printf("[");
+		printf("%4.3g", dict->var_bounds.lower[i]);
+		if (dict->var_rests[i] == LOWER)
+			printf("]");
+		printf(", ");
+		if (dict->var_rests[i] == UPPER)
+			printf("[");
+		printf("%4.3g", dict->var_bounds.upper[i]);
+		if (dict->var_rests[i] == UPPER)
+			printf("]");
+		printf(")");
 	}
 	printf("\n\n");
 }

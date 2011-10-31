@@ -76,6 +76,16 @@ static void load_lp_file(dictionary *dict) {
 		load_constraint_bounds(in, dict);
 		load_var_bounds(in, dict);
 		
+		// Pick the initial resting bounds for the variables.
+		int index;
+		for (index = 0; index < dict->num_vars; ++index) {
+			if ((dict->objective[index] >= 0) && (dict->var_bounds.upper[index] < INFINITY)) {
+				dict->var_rests[index] = UPPER;
+			} else {
+				dict->var_rests[index] = LOWER;
+			}
+		}
+
 		// Close the input file.
 		fclose(in);
 		

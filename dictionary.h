@@ -24,7 +24,7 @@ typedef struct {
 
 typedef struct {
 	int infeasible_row;
-	int infeasible_amount;
+	double infeasible_amount;
 } infeasible_row_t;
 
 typedef struct {
