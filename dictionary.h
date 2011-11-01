@@ -23,6 +23,10 @@ typedef struct {
 } bounds_t;
 
 typedef struct {
+	int *unbounded_vars;
+} unbounded_vars_t;
+
+typedef struct {
 	int infeasible_row;
 	double infeasible_amount;
 } infeasible_row_t;
@@ -43,6 +47,10 @@ typedef struct {
 	// These labels correspond to basis variables.
 	int* row_labels;
 	
+	// The location of the pair of a split.  Unidirectional, so only one of a
+	// pair points at the other (to prevent dupes).
+	int* split_vars;
+
 	bounds_t con_bounds;
 	bounds_t var_bounds;
 	

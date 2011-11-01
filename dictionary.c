@@ -108,6 +108,11 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * min_int(new_num_vars, dict->num_vars));
 	dict->var_rests = new_var_rests;
 
+	int *new_split_vars = malloc(sizeof(int) * new_num_vars);
+	memset(new_split_vars, 0, sizeof(int) * new_num_vars);
+	memcpy(new_split_vars, dict->split_vars, sizeof(int) * min_int(new_num_vars, dict->num_vars));
+	dict->split_vars = new_split_vars;
+
 	bounds_t new_var_bounds;
 	new_var_bounds.lower = malloc(sizeof(double) * new_num_vars);
 	memset(new_var_bounds.lower, 0, (sizeof(double) * new_num_vars));
@@ -154,7 +159,72 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 	dict->num_vars = new_num_vars;
 }
 
+bool is_unbounded_var_at_index(dictionary *dict, int index) {
+	/* Not sure if you're technically allowed to check equality with infinity,
+	 * but since we're the ones setting infinity and not trying to create new
+	 * infinities, perhaps this is allowed?
+	 */
+	if (dict->var_bounds.upper[index] == INFINITY &&
+			dict->var_bounds.lower[index] == -INFINITY)
+
+		return TRUE;
+	else
+		return FALSE;
+}
+
+unsigned dictionary_get_num_unbounded_vars(dictionary *dict) {
+	int i;
+	unsigned num_unbounded_vars = 0;
+	for (i = 0; i < dict->num_vars; ++i) {
+		if (is_unbounded_var_at_index(dict, i))
+			++num_unbounded_vars;
+	}
+	return num_unbounded_vars;
+}
+
+
+void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
+	int next_split_var = starting_split_var;
+
+	int i;
+	for (i = 0; i < starting_split_var; ++i) {
+		if (is_unbounded_var_at_index(dict, i)) {
+			// split var
+			int j;
+			for (j = 0; j < dict->num_cons; ++j) {
+				// A bit silly, but don't negate zeros because it looks ugly
+				if (dict->matrix[j * dict->num_vars + i])
+					dict->matrix[j * dict->num_vars + next_split_var] =
+						-dict->matrix[j * dict->num_vars + i];
+				else
+					dict->matrix[j * dict->num_vars + next_split_var] =
+						dict->matrix[j * dict->num_vars + i];
+			}
+			dict->var_bounds.upper[next_split_var] = 0;
+			dict->var_bounds.lower[next_split_var] = -INFINITY;
+			dict->var_bounds.upper[i] = INFINITY;
+			dict->var_bounds.lower[i] = 0;
+
+			dict->var_rests[next_split_var] = UPPER;
+			dict->var_rests[i] = LOWER;
+
+			dict->objective[next_split_var] = -dict->objective[i];
+
+			dict->col_labels[next_split_var] = 1 + next_split_var + dict->num_cons;
+			dict->split_vars[i] = dict->col_labels[next_split_var];
+
+			++next_split_var;
+		}
+	}
+}
+
 void dictionary_init(dictionary* dict) {
+	unsigned num_unbounded_vars = dictionary_get_num_unbounded_vars(dict);
+
+	int pre_resize_num_vars = dict->num_vars;
+	dictionary_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
+	dictionary_populate_split_vars(dict, pre_resize_num_vars);
+
 	infeasible_set_t infeasible = dictionary_infeasible_rows(dict);
 	
 	if (infeasible.num_infeasible_rows) {
@@ -228,6 +298,9 @@ void dictionary_init_struct(dictionary* dict) {
 	
 	dict->var_rests = (rest_t*)malloc(dict->num_vars * sizeof(rest_t));
 	
+	dict->split_vars = (int*)malloc(dict->num_vars * sizeof(int));
+	memset(dict->split_vars, 0, dict->num_vars * sizeof(int));
+
 	// Initialize the variable labels.
 	for (index = 1; index <= dict->num_vars; ++index) {
 		dict->col_labels[index - 1] = index;
@@ -433,6 +506,14 @@ void dictionary_view(const dictionary* dict) {
 		if (dict->var_rests[i] == UPPER)
 			printf("]");
 		printf(")");
+	}
+
+	printf("\n\n");
+
+	printf("Split vars: ");
+	for (i = 0; i < dict->num_vars; ++i) {
+		if (dict->split_vars[i])
+			printf("x%i<->x%i ", dict->col_labels[i], dict->split_vars[i]);
 	}
 	printf("\n\n");
 }
