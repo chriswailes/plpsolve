@@ -309,7 +309,7 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	coefficient = dict->objective[col_index];
 	for (index0 = 0; index0 < dict->num_vars; ++index0) {
 		if (index0 == col_index) {
-			dict->objective[index0]  = tmp_row[index0];
+			dict->objective[index0]  = coefficient * tmp_row[index0];
 		} else {
 			dict->objective[index0] += coefficient * tmp_row[index0];
 		}
@@ -333,6 +333,53 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	
 	// Free our temporary row.
 	free(tmp_row);
+}
+
+bool dictionary_var_can_enter(dictionary* dict, int col_index) {
+	if ((dict->objective[col_index] < 0 && dict->var_rests[col_index] == UPPER) || (dict->objective[col_index] > 0 && dict->var_rests[col_index] == LOWER)) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
+/*
+ * Determines if a variable (referenced by the corresponding row in the matrix)
+ * can leave when a given variable (referenced by the corresponding column in
+ * the matrix) is entering.
+ * 
+ * If the variable can't leave 0 is returned.  If it can leave, the amount that
+ * it constrains the entering variable is returned.
+ */
+double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) {
+	int index;
+	double accum = 0;
+	double t_coef;
+	double* row = &dict->matrix[row_index * dict->num_vars];
+	
+	/*
+	 * Accumulate the constant given the resting bounds for the non-basic
+	 * variables.
+	 */
+	for (index = 0; index < dict->num_vars; ++index) {
+		accum += row[index] * (dict->var_rests[col_index] == UPPER ? dict->var_bounds.upper : dict->var_bounds.lower)[col_index];
+	}
+	
+	// Get the coefficient for t.
+	t_coef  = dict->var_rests[col_index] == UPPER ? -1.0 : 1.0;
+	t_coef *= row[col_index];
+	
+	/*
+	 * Calculate the amount this leaving variable choice constrains the
+	 * entering variable's value.
+	 */
+	if (dict->con_bounds.lower[row_index] < accum && t_coef < 0) {
+		return (dict->con_bounds.lower[row_index] - accum) / t_coef;
+	} else if (accum < dict->con_bounds.upper[row_index] && t_coef > 0) {
+		return (dict->con_bounds.upper[row_index] - accum) / t_coef;
+	} else {
+		return 0;
+	}
 }
 
 void dictionary_view(const dictionary* dict) {
