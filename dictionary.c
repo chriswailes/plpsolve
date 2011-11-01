@@ -211,7 +211,7 @@ void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
 			dict->objective[next_split_var] = -dict->objective[i];
 
 			dict->col_labels[next_split_var] = 1 + next_split_var + dict->num_cons;
-			dict->split_vars[i] = dict->col_labels[next_split_var];
+			dict->split_vars[dict->col_labels[i]] = dict->col_labels[next_split_var];
 
 			++next_split_var;
 		}
@@ -513,7 +513,7 @@ void dictionary_view(const dictionary* dict) {
 	printf("Split vars: ");
 	for (i = 0; i < dict->num_vars; ++i) {
 		if (dict->split_vars[i])
-			printf("x%i<->x%i ", dict->col_labels[i], dict->split_vars[i]);
+			printf("x%i<->x%i ", i, dict->split_vars[i]);
 	}
 	printf("\n\n");
 }
