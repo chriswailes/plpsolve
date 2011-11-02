@@ -66,11 +66,11 @@ void get_config(int argc, char** argv) {
 		} else if (check_option(argv[index], "--mathprog", "-m")) {
 			cfg.mathprog_filename = argv[index + 1];
 			++index;
-		} else if (check_options(argv[index], "--rule", "-r")) {
-			if (strcmp(argv[index + 1], 'blands')) {
+		} else if (check_option(argv[index], "--rule", "-r")) {
+			if (strcmp(argv[index + 1], "blands")) {
 				cfg.rule = BLANDS;
 				
-			} else if (strcmp(argv[index + 1], 'profy')) {
+			} else if (strcmp(argv[index + 1], "profy")) {
 				cfg.rule = PROFY;
 			}
 			
@@ -95,7 +95,7 @@ static inline void init_config(void) {
 	cfg.mathprog_filename = 0;
 	cfg.method	= PIVOT;
 	cfg.pmode		= NONE;
-	cfg.rule		= NONE;
+	cfg.rule		= NO;
 	cfg.verbose	= FALSE;
 }
 

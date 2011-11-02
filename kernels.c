@@ -16,7 +16,7 @@ void pivot_kernel(dictionary* dict) {
 	int e_and_l[2];
 	
 	while (!dictionary_is_final(dict)) {
-		//select_entering_and_leaving(dict, &e_and_l);
+		select_entering_and_leaving(dict, e_and_l);
 		
 		/*
 		 * If the leaving variable is -1 we need to swap the bounds on the
