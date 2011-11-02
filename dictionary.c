@@ -351,8 +351,12 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	// Allocate space for our work.
 	tmp_row = (double*)malloc(dict->num_vars * sizeof(double));
 	
+	printf("Row Index: %d\n", row_index);
+	
 	// Copy the pivot row.
 	memcpy(tmp_row, &dict->matrix[row_index * dict->num_vars], dict->num_vars * sizeof(double));
+	
+	printf("HERE!\n");
 	
 	// Grab the coefficient from the pivot column, and then replace it.
 	coefficient = -tmp_row[col_index];
@@ -362,7 +366,7 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	for (index0 = 0; index0 < dict->num_vars; ++index0) {
 		tmp_row[index0] /= coefficient;
 	}
-	
+
 	// Replace old row with new row.
 	memcpy(&dict->matrix[row_index * dict->num_vars], tmp_row, dict->num_vars * sizeof(double));
 	
@@ -439,8 +443,11 @@ double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) 
 	 * variables.
 	 */
 	for (index = 0; index < dict->num_vars; ++index) {
-		accum += row[index] * (dict->var_rests[col_index] == UPPER ? dict->var_bounds.upper : dict->var_bounds.lower)[col_index];
+		//~printf("BAF: %f\n", row[index]);
+		accum += row[index] * (dict->var_rests[index] == UPPER ? dict->var_bounds.upper : dict->var_bounds.lower)[index];
 	}
+	
+	//~printf("BAR: %f\n", accum);
 	
 	// Get the coefficient for t.
 	t_coef  = dict->var_rests[col_index] == UPPER ? -1.0 : 1.0;
@@ -455,7 +462,7 @@ double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) 
 	} else if (accum < dict->con_bounds.upper[row_index] && t_coef > 0) {
 		return (dict->con_bounds.upper[row_index] - accum) / t_coef;
 	} else {
-		return 0;
+		return -1;
 	}
 }
 
@@ -523,7 +530,8 @@ void dictionary_view(const dictionary* dict) {
 }
 
 void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
-	int index, tmp;
+	int index;
+	double tmp, max_constraint;
 	
 	bool flip;
 	
@@ -545,24 +553,29 @@ void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 		 */
 		
 		if (dict->objective[e_and_l[0]] < 0 && dict->var_rests[e_and_l[0]] == UPPER) {
-			e_and_l[1]	= dict->var_bounds.lower[e_and_l[0]];
+			max_constraint	= dict->var_bounds.lower[e_and_l[0]];
 			flip			= TRUE;
 			
 		} else if (dict->objective[e_and_l[0]] > 0 && dict->var_rests[e_and_l[0]] == LOWER) {
-			e_and_l[1]	= dict->var_bounds.upper[e_and_l[0]];
+			max_constraint	= dict->var_bounds.upper[e_and_l[0]];
 			flip			= TRUE;
 			
 		} else {
-			e_and_l[1]	= 0;
+			max_constraint	= 0;
 			flip			= FALSE;
 		}
 		
 		for (index = 0; index < dict->num_cons; ++index) {
 			tmp = dictionary_var_can_leave(dict, e_and_l[0], index);
 			
+			printf("FOO: %f\n", tmp);
+			printf("BAF: %f\n", max_constraint);
+			
 			// Found a new, more constraining, choice.
-			if (tmp < e_and_l[1]) {
-				e_and_l[1]	= tmp;
+			if (tmp != -1 && tmp < max_constraint) {
+				printf("BAR!\n");
+				max_constraint	= tmp;
+				e_and_l[1]	= index;
 				flip			= FALSE;
 			}
 		}
@@ -571,4 +584,6 @@ void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 			e_and_l[1] = -1;
 		}
 	}
+	
+	printf("DONE AND DONE!\n");
 }

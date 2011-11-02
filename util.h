@@ -26,7 +26,7 @@ typedef enum {
 } pmode_t;
 
 typedef enum {
-	NONE = 0,
+	NO = 0,
 	BLANDS,
 	PROFY
 } rule_t;
@@ -36,6 +36,7 @@ typedef struct {
 	
 	method_t method;
 	pmode_t pmode;
+	rule_t rule;
 	
 	bool verbose;
 	char* mathprog_filename;

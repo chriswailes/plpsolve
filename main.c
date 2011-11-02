@@ -52,12 +52,12 @@ int main(int argc, char** argv) {
 			break;
 	}
 	
-	dictionary_pivot(&dict, 0, 0);
-	
-	dictionary_view(&dict);
+	if (cfg.verbose) {
+		printf("Final Dictionary:\n");
+		dictionary_view(&dict);
+	}
 	
 	dictionary_free(&dict);
-	
 	return 0;
 }
 
