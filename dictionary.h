@@ -57,6 +57,8 @@ typedef struct {
 	rest_t* var_rests;
 } dictionary;
 
+void select_entering_and_leaving(dictionary* dict, int* e_and_l);
+
 void				dictionary_free(dictionary* dict);
 infeasible_set_t	dictionary_infeasible_rows(dictionary *dict);
 void				dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons);

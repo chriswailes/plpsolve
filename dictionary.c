@@ -16,6 +16,10 @@
 #include "dictionary.h"
 #include "util.h"
 
+// Globals
+
+extern config cfg;
+
 // Functions
 
 void dictionary_free(dictionary* dict) {
@@ -516,4 +520,55 @@ void dictionary_view(const dictionary* dict) {
 			printf("x%i<->x%i ", i, dict->split_vars[i]);
 	}
 	printf("\n\n");
+}
+
+void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
+	int index, tmp;
+	
+	bool flip;
+	
+	if (cfg.rule == BLANDS) {
+		
+	} else if (cfg.rule == PROFY) {
+		
+	} else {
+		// Select the entering variable.
+		for (index = 0; index < dict->num_vars; ++index) {
+			if (dictionary_var_can_enter(dict, index)) {
+				e_and_l[0] = index;
+				break;
+			}
+		}
+		
+		/*
+		 * Pick the leaving variable.
+		 */
+		
+		if (dict->objective[e_and_l[0]] < 0 && dict->var_rests[e_and_l[0]] == UPPER) {
+			e_and_l[1]	= dict->var_bounds.lower[e_and_l[0]];
+			flip			= TRUE;
+			
+		} else if (dict->objective[e_and_l[0]] > 0 && dict->var_rests[e_and_l[0]] == LOWER) {
+			e_and_l[1]	= dict->var_bounds.upper[e_and_l[0]];
+			flip			= TRUE;
+			
+		} else {
+			e_and_l[1]	= 0;
+			flip			= FALSE;
+		}
+		
+		for (index = 0; index < dict->num_cons; ++index) {
+			tmp = dictionary_var_can_leave(dict, e_and_l[0], index);
+			
+			// Found a new, more constraining, choice.
+			if (tmp < e_and_l[1]) {
+				e_and_l[1]	= tmp;
+				flip			= FALSE;
+			}
+		}
+		
+		if (flip) {
+			e_and_l[1] = -1;
+		}
+	}
 }

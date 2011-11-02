@@ -25,6 +25,12 @@ typedef enum {
 	GPU
 } pmode_t;
 
+typedef enum {
+	NONE = 0,
+	BLANDS,
+	PROFY
+} rule_t;
+
 typedef struct {
 	char* filename;
 	
