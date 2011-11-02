@@ -34,6 +34,8 @@ int main(int argc, char** argv) {
 	get_config(argc, argv);
 	load_lp_file(&dict);
 	
+	unsigned num_orig_vars = dict.num_vars;
+
 	if (cfg.verbose) {
 		dictionary_view(&dict);
 	}
@@ -53,9 +55,11 @@ int main(int argc, char** argv) {
 	}
 	
 	dictionary_pivot(&dict, 0, 0);
-	
+
 	dictionary_view(&dict);
 	
+	dictionary_view_answer(&dict, num_orig_vars);
+
 	dictionary_free(&dict);
 	
 	return 0;

@@ -61,9 +61,19 @@ void get_config(int argc, char** argv) {
 			} else if (strncmp(argv[index + 1], "gpu", 3) == 0) {
 				cfg.pmode = GPU;
 			}
+			
 			++index;
 		} else if (check_option(argv[index], "--mathprog", "-m")) {
 			cfg.mathprog_filename = argv[index + 1];
+			++index;
+		} else if (check_options(argv[index], "--rule", "-r")) {
+			if (strcmp(argv[index + 1], 'blands')) {
+				cfg.rule = BLANDS;
+				
+			} else if (strcmp(argv[index + 1], 'profy')) {
+				cfg.rule = PROFY;
+			}
+			
 			++index;
 		}
 	}
@@ -82,10 +92,11 @@ static inline bool check_option(char* opt, char* lng, char* srt) {
 }
 
 static inline void init_config(void) {
+	cfg.mathprog_filename = 0;
 	cfg.method	= PIVOT;
 	cfg.pmode		= NONE;
+	cfg.rule		= NONE;
 	cfg.verbose	= FALSE;
-	cfg.mathprog_filename = 0;
 }
 
 static inline void print_help(void) {
@@ -94,6 +105,7 @@ static inline void print_help(void) {
 	
 	//Help for Project options.
 	print_help_item("parallel", "p", "Specifies parallelism mode.  Must be mp, pthreads, gpu, or none.");
+	print_help_item("rule", "r", "Specifies the termination rule to use.  Choices are: none, blands, or profy.  Default is none.");
 	
 	// Help for Debug outputs.
 	print_help_item("mathprog", "m", "Outputs mathprog compatible file.  Must specify filename.");

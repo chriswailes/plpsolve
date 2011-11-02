@@ -17,6 +17,10 @@
 #include "util.h"
 #include "kernels.h"
 
+// Globals
+
+extern config cfg;
+
 // Functions
 
 void dictionary_free(dictionary* dict) {
@@ -266,7 +270,7 @@ void dictionary_init(dictionary* dict) {
 
 		dictionary_view(dict);
 
-		//pivot_kernel(dict);
+		pivot_kernel(dict);
 
 		dictionary_resize(dict, old_num_vars, old_num_cons);
 		dict->objective = old_objective;
@@ -521,7 +525,7 @@ void dictionary_view(const dictionary* dict) {
 	printf("\n\n");
 }
 
-void dictionary_view_answer(const dictionary* dict) {
+void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 	int i;
 	double objective = 0.0;
 	for (i = 0; i < dict->num_vars; ++i) {
@@ -535,7 +539,7 @@ void dictionary_view_answer(const dictionary* dict) {
 
 	printf("Objective: %f\n", objective);
 
-	for (i = 1; i <= dict->num_vars + dict->num_cons; ++i) {
+	for (i = 1; i <= num_orig_vars; ++i) {
 		int j;
 		bool is_done = FALSE;
 		for (j = 0; j < dict->num_vars; ++j) {
@@ -566,6 +570,57 @@ void dictionary_view_answer(const dictionary* dict) {
 					printf("x%i = %f\n", i, var_total);
 				}
 			}
+		}
+	}
+}
+
+void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
+	int index, tmp;
+	
+	bool flip;
+	
+	if (cfg.rule == BLANDS) {
+		
+	} else if (cfg.rule == PROFY) {
+		
+	} else {
+		// Select the entering variable.
+		for (index = 0; index < dict->num_vars; ++index) {
+			if (dictionary_var_can_enter(dict, index)) {
+				e_and_l[0] = index;
+				break;
+			}
+		}
+		
+		/*
+		 * Pick the leaving variable.
+		 */
+		
+		if (dict->objective[e_and_l[0]] < 0 && dict->var_rests[e_and_l[0]] == UPPER) {
+			e_and_l[1]	= dict->var_bounds.lower[e_and_l[0]];
+			flip			= TRUE;
+			
+		} else if (dict->objective[e_and_l[0]] > 0 && dict->var_rests[e_and_l[0]] == LOWER) {
+			e_and_l[1]	= dict->var_bounds.upper[e_and_l[0]];
+			flip			= TRUE;
+			
+		} else {
+			e_and_l[1]	= 0;
+			flip			= FALSE;
+		}
+		
+		for (index = 0; index < dict->num_cons; ++index) {
+			tmp = dictionary_var_can_leave(dict, e_and_l[0], index);
+			
+			// Found a new, more constraining, choice.
+			if (tmp < e_and_l[1]) {
+				e_and_l[1]	= tmp;
+				flip			= FALSE;
+			}
+		}
+		
+		if (flip) {
+			e_and_l[1] = -1;
 		}
 	}
 }
