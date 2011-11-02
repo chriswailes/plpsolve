@@ -353,12 +353,8 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	// Allocate space for our work.
 	tmp_row = (double*)malloc(dict->num_vars * sizeof(double));
 	
-	printf("Row Index: %d\n", row_index);
-	
 	// Copy the pivot row.
 	memcpy(tmp_row, &dict->matrix[row_index * dict->num_vars], dict->num_vars * sizeof(double));
-	
-	printf("HERE!\n");
 	
 	// Grab the coefficient from the pivot column, and then replace it.
 	coefficient = -tmp_row[col_index];
