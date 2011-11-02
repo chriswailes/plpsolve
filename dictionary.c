@@ -449,8 +449,6 @@ double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) 
 		accum += row[index] * (dict->var_rests[index] == UPPER ? dict->var_bounds.upper : dict->var_bounds.lower)[index];
 	}
 	
-	//~printf("BAR: %f\n", accum);
-	
 	// Get the coefficient for t.
 	t_coef  = dict->var_rests[col_index] == UPPER ? -1.0 : 1.0;
 	t_coef *= row[col_index];
@@ -620,12 +618,8 @@ void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 		for (index = 0; index < dict->num_cons; ++index) {
 			tmp = dictionary_var_can_leave(dict, e_and_l[0], index);
 			
-			printf("FOO: %f\n", tmp);
-			printf("BAF: %f\n", max_constraint);
-			
 			// Found a new, more constraining, choice.
 			if (tmp != -1 && tmp < max_constraint) {
-				printf("BAR!\n");
 				max_constraint	= tmp;
 				e_and_l[1]	= index;
 				flip			= FALSE;
@@ -636,6 +630,4 @@ void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 			e_and_l[1] = -1;
 		}
 	}
-	
-	printf("DONE AND DONE!\n");
 }
