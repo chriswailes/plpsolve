@@ -15,6 +15,7 @@
 // Project Includes
 #include "dictionary.h"
 #include "util.h"
+#include "kernels.h"
 
 // Functions
 
@@ -265,9 +266,10 @@ void dictionary_init(dictionary* dict) {
 
 		dictionary_view(dict);
 
+		//pivot_kernel(dict);
+
 		dictionary_resize(dict, old_num_vars, old_num_cons);
 		dict->objective = old_objective;
-
 		printf("Resetting to original dictionary\n");
 		dictionary_view(dict);
 	}
@@ -512,8 +514,58 @@ void dictionary_view(const dictionary* dict) {
 
 	printf("Split vars: ");
 	for (i = 0; i < dict->num_vars; ++i) {
-		if (dict->split_vars[i])
+		if (dict->split_vars[i]) {
 			printf("x%i<->x%i ", i, dict->split_vars[i]);
+		}
 	}
 	printf("\n\n");
+}
+
+void dictionary_view_answer(const dictionary* dict) {
+	int i;
+	double objective = 0.0;
+	for (i = 0; i < dict->num_vars; ++i) {
+		if (dict->var_rests[i] == LOWER) {
+			objective += dict->objective[i] * dict->var_bounds.lower[i];
+		}
+		else {
+			objective += dict->objective[i] * dict->var_bounds.upper[i];
+		}
+	}
+
+	printf("Objective: %f\n", objective);
+
+	for (i = 1; i <= dict->num_vars + dict->num_cons; ++i) {
+		int j;
+		bool is_done = FALSE;
+		for (j = 0; j < dict->num_vars; ++j) {
+			if (dict->col_labels[j] == i) {
+				if (dict->var_rests[j] == LOWER) {
+					printf("x%i = %f\n", i, dict->var_bounds.lower[j]);
+				}
+				else {
+					printf("x%i = %f\n", i, dict->var_bounds.upper[j]);
+				}
+				is_done = TRUE;
+				break;
+			}
+		}
+		if (!is_done) {
+			for (j = 0; j < dict->num_cons; ++j) {
+				if (dict->row_labels[j] == i) {
+					int k;
+					double var_total = 0.0;
+					for (k = 0; k < dict->num_vars; ++k) {
+						if (dict->var_rests[k] == LOWER) {
+							var_total += dict->var_bounds.lower[k] * dict->matrix[j * dict->num_vars + k];
+						}
+						else {
+							var_total += dict->var_bounds.upper[k] * dict->matrix[j * dict->num_vars + k];
+						}
+					}
+					printf("x%i = %f\n", i, var_total);
+				}
+			}
+		}
+	}
 }

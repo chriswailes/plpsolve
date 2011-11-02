@@ -67,5 +67,6 @@ void				dictionary_pivot(dictionary* dict, int col_index, int row_index);
 bool				dictionary_var_can_enter(dictionary* dict, int col_index);
 double			dictionary_var_can_leave(dictionary* dict, int col_index, int row_index);
 void				dictionary_view(const dictionary* dict);
+void        dictionary_view_answer(const dictionary* dict);
 
 #endif
