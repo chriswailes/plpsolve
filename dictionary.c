@@ -275,9 +275,23 @@ void dictionary_init(dictionary* dict) {
 
 		dictionary_view(dict);
 
-		dictionary_resize(dict, old_num_vars, old_num_cons);
-		dict->objective = old_objective;
-		printf("Resetting to original dictionary\n");
+
+		//dictionary_resize(dict, old_num_vars, old_num_cons);
+		memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
+		//dict->objective = old_objective;
+		for (i = 0; i < dict->num_vars; ++i) {
+			if (dict->col_labels[i] > (old_num_vars + old_num_cons)) {
+				dict->var_bounds.lower[i] = 0;
+				dict->var_bounds.upper[i] = 0;
+			}
+		}
+		for (i = 0; i < dict->num_cons; ++i) {
+			if (dict->row_labels[i] > (old_num_vars + old_num_cons)) {
+				dict->con_bounds.lower[i] = 0;
+				dict->con_bounds.upper[i] = 0;
+			}
+		}
+		printf("Resetting to original objective\n");
 		dictionary_view(dict);
 	}
 	else {
@@ -605,7 +619,7 @@ void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 			max_constraint	= dict->var_bounds.lower[e_and_l[0]];
 			flip			= TRUE;
 			
-		} else if (dict->objective[e_and_l[0]] > 0 && dict->var_rests[e_and_l[0]] == LOWER) {
+		} else if (dict->objective[e_and_l[0]] >= 0 && dict->var_rests[e_and_l[0]] == LOWER) {
 			max_constraint	= dict->var_bounds.upper[e_and_l[0]];
 			flip			= TRUE;
 			
