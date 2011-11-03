@@ -226,6 +226,8 @@ void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
 void dictionary_init(dictionary* dict) {
 	unsigned num_unbounded_vars = dictionary_get_num_unbounded_vars(dict);
 
+	dictionary_view(dict);
+
 	int pre_resize_num_vars = dict->num_vars;
 	dictionary_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
 	dictionary_populate_split_vars(dict, pre_resize_num_vars);
@@ -244,8 +246,6 @@ void dictionary_init(dictionary* dict) {
 			printf("  row: %i by %f\n", infeasible.infeasible_rows[i].infeasible_row,
 					infeasible.infeasible_rows[i].infeasible_amount);
 		}
-		dictionary_view(dict);
-
 		dictionary_resize(dict, dict->num_vars + infeasible.num_infeasible_rows,
 				dict->num_cons);
 
@@ -256,6 +256,7 @@ void dictionary_init(dictionary* dict) {
 			dict->objective[i + old_num_vars] = -1;
 			dict->var_bounds.lower[i + old_num_vars] = 0;
 			dict->col_labels[old_num_vars + i] = 1 + i + (dict->num_vars - infeasible.num_infeasible_rows) + dict->num_cons;
+			dict->var_rests[old_num_vars + i] = UPPER;
 			if (infeasible.infeasible_rows[i].infeasible_amount < 0) {
 				dict->var_bounds.upper[i + old_num_vars] = infeasible.infeasible_rows[i].infeasible_amount * -1;
 
@@ -269,8 +270,10 @@ void dictionary_init(dictionary* dict) {
 		}
 
 		dictionary_view(dict);
-
 		pivot_kernel(dict);
+		printf("[[[[[After init pivot:]]]]]\n");
+
+		dictionary_view(dict);
 
 		dictionary_resize(dict, old_num_vars, old_num_cons);
 		dict->objective = old_objective;
