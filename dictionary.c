@@ -441,7 +441,6 @@ double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) 
 	 * variables.
 	 */
 	for (index = 0; index < dict->num_vars; ++index) {
-		//~printf("BAF: %f\n", row[index]);
 		accum += row[index] * (dict->var_rests[index] == UPPER ? dict->var_bounds.upper : dict->var_bounds.lower)[index];
 	}
 	
@@ -576,54 +575,52 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 }
 
 void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
-	int index;
+	int index, min_sub = -1;
 	double tmp, max_constraint;
 	
 	bool flip;
 	
-	if (cfg.rule == BLANDS) {
-		
-	} else if (cfg.rule == PROFY) {
-		
-	} else {
-		// Select the entering variable.
-		for (index = 0; index < dict->num_vars; ++index) {
-			if (dictionary_var_can_enter(dict, index)) {
+	// Select the entering variable.
+	for (index = 0; index < dict->num_vars; ++index) {
+		if (dictionary_var_can_enter(dict, index)) {
+			if (cfg.rule == BLANDS) {
+				
+			} else {
 				e_and_l[0] = index;
 				break;
 			}
 		}
+	}
+	
+	/*
+	 * Pick the leaving variable.
+	 */
+	
+	if (dict->objective[e_and_l[0]] < 0 && dict->var_rests[e_and_l[0]] == UPPER) {
+		max_constraint	= dict->var_bounds.lower[e_and_l[0]];
+		flip			= TRUE;
 		
-		/*
-		 * Pick the leaving variable.
-		 */
+	} else if (dict->objective[e_and_l[0]] > 0 && dict->var_rests[e_and_l[0]] == LOWER) {
+		max_constraint	= dict->var_bounds.upper[e_and_l[0]];
+		flip			= TRUE;
 		
-		if (dict->objective[e_and_l[0]] < 0 && dict->var_rests[e_and_l[0]] == UPPER) {
-			max_constraint	= dict->var_bounds.lower[e_and_l[0]];
-			flip			= TRUE;
-			
-		} else if (dict->objective[e_and_l[0]] > 0 && dict->var_rests[e_and_l[0]] == LOWER) {
-			max_constraint	= dict->var_bounds.upper[e_and_l[0]];
-			flip			= TRUE;
-			
-		} else {
-			max_constraint	= 0;
+	} else {
+		max_constraint	= 0;
+		flip			= FALSE;
+	}
+	
+	for (index = 0; index < dict->num_cons; ++index) {
+		tmp = dictionary_var_can_leave(dict, e_and_l[0], index);
+		
+		// Found a new, more constraining, choice.
+		if (tmp != -1 && tmp < max_constraint) {
+			max_constraint	= tmp;
+			e_and_l[1]	= index;
 			flip			= FALSE;
 		}
-		
-		for (index = 0; index < dict->num_cons; ++index) {
-			tmp = dictionary_var_can_leave(dict, e_and_l[0], index);
-			
-			// Found a new, more constraining, choice.
-			if (tmp != -1 && tmp < max_constraint) {
-				max_constraint	= tmp;
-				e_and_l[1]	= index;
-				flip			= FALSE;
-			}
-		}
-		
-		if (flip) {
-			e_and_l[1] = -1;
-		}
+	}
+	
+	if (flip) {
+		e_and_l[1] = -1;
 	}
 }
