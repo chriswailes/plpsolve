@@ -34,10 +34,12 @@ void pivot_kernel(dictionary* dict) {
 			dictionary_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest);
 		}
 		
+		//~dictionary_view(dict);
+		
 		++iters;
 	}
 	
 	if (cfg.verbose) {
-		printf("Simplex took %d iterations.\n", iters);
+		printf("Simplex took %d iterations.\n\n", iters);
 	}
 }

@@ -387,13 +387,13 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 	/*
 	 * Pick the leaving variable.
 	 */
-	if (dict->objective[result->entering] < 0 && dict->var_rests[result->entering] == UPPER && dict->var_bounds.upper[result->entering] != INFINITY) {
+	if (dict->objective[result->entering] < 0 && dict->var_rests[result->entering] == UPPER && dict->var_bounds.lower[result->entering] != -INFINITY) {
 		max_constraint = dict->var_bounds.lower[result->entering];
 		
 		result->flip		= TRUE;
 		result->new_rest	= LOWER;
 		
-	} else if (dict->objective[result->entering] > 0 && dict->var_rests[result->entering] == LOWER && dict->var_bounds.lower[result->entering] != -INFINITY) {
+	} else if (dict->objective[result->entering] > 0 && dict->var_rests[result->entering] == LOWER && dict->var_bounds.upper[result->entering] != INFINITY) {
 		max_constraint = dict->var_bounds.upper[result->entering];
 		
 		result->flip		= TRUE;
