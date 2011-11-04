@@ -89,6 +89,13 @@ void get_config(int argc, char** argv) {
 	}
 }
 
+inline int min_int(int left, int right) {
+	if (right < left)
+		return right;
+	else
+		return left;
+}
+
 static inline bool check_option(char* opt, char* lng, char* srt) {
 	return ((strcmp(opt, lng) == 0) || (strcmp(opt, srt) == 0));
 }

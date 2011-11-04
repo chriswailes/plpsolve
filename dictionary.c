@@ -39,6 +39,133 @@ void dictionary_free(dictionary* dict) {
 	free(dict->var_rests);
 }
 
+infeasible_set_t dictionary_infeasible_rows(dictionary *dict) {
+	//This can be done a little less naively, but do it naively for now
+	int i, j;
+	infeasible_set_t infeasible_set;
+	infeasible_set.infeasible_rows = 0;
+	infeasible_set.num_infeasible_rows = 0;
+
+	for (j = 0; j < dict->num_cons; ++j) {
+		double constraint_sum = 0.0;
+		for (i = 0; i < dict->num_vars; ++i) {
+			switch (dict->var_rests[i]) {
+			case UPPER:
+				constraint_sum += dict->matrix[i + j * dict->num_vars] * dict->var_bounds.upper[i];
+				break;
+			case LOWER:
+				constraint_sum += dict->matrix[i + j * dict->num_vars] * dict->var_bounds.lower[i];
+				break;
+			}
+		}
+		if ((constraint_sum < dict->con_bounds.lower[j]) ||
+				(constraint_sum > dict->con_bounds.upper[j])) {
+
+			//add infeasible
+			++infeasible_set.num_infeasible_rows;
+			if (infeasible_set.num_infeasible_rows) {
+				infeasible_set.infeasible_rows = realloc(infeasible_set.infeasible_rows,
+						infeasible_set.num_infeasible_rows * sizeof(infeasible_row_t));
+			}
+			else {
+				infeasible_set.infeasible_rows = malloc(infeasible_set.num_infeasible_rows *
+						sizeof(infeasible_row_t));
+			}
+
+			if (constraint_sum < dict->con_bounds.lower[j]) {
+				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_row = j;
+				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_amount =
+						dict->con_bounds.lower[j] - constraint_sum;
+			}
+			else if (constraint_sum > dict->con_bounds.upper[j]) {
+				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_row = j;
+				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_amount =
+						dict->con_bounds.upper[j] - constraint_sum;
+			}
+		}
+	}
+
+	return infeasible_set;
+}
+
+void dictionary_init(dictionary* dict) {
+	unsigned num_unbounded_vars = dictionary_get_num_unbounded_vars(dict);
+
+	dictionary_view(dict);
+
+	int pre_resize_num_vars = dict->num_vars;
+	dictionary_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
+	dictionary_populate_split_vars(dict, pre_resize_num_vars);
+
+	infeasible_set_t infeasible = dictionary_infeasible_rows(dict);
+	
+	if (infeasible.num_infeasible_rows) {
+		// perform initialization
+		double *old_objective = dict->objective;
+		int old_num_vars = dict->num_vars;
+		int old_num_cons = dict->num_cons;
+
+		printf("Number infeasible rows: %i\n", infeasible.num_infeasible_rows);
+		int i;
+		for (i = 0; i < infeasible.num_infeasible_rows; ++i) {
+			printf("  row: %i by %f\n", infeasible.infeasible_rows[i].infeasible_row,
+					infeasible.infeasible_rows[i].infeasible_amount);
+		}
+		dictionary_resize(dict, dict->num_vars + infeasible.num_infeasible_rows,
+				dict->num_cons);
+
+		for (i = 0; i < old_num_vars; ++i) {
+			dict->objective[i] = 0;
+		}
+		for (i = 0; i < infeasible.num_infeasible_rows; ++i) {
+			dict->objective[i + old_num_vars] = -1;
+			dict->var_bounds.lower[i + old_num_vars] = 0;
+			dict->col_labels[old_num_vars + i] = 1 + i + (dict->num_vars - infeasible.num_infeasible_rows) + dict->num_cons;
+			dict->var_rests[old_num_vars + i] = UPPER;
+			if (infeasible.infeasible_rows[i].infeasible_amount < 0) {
+				dict->var_bounds.upper[i + old_num_vars] = infeasible.infeasible_rows[i].infeasible_amount * -1;
+
+				//FIXME: During shrinking this can segfault
+				dict->matrix[infeasible.infeasible_rows[i].infeasible_row * dict->num_vars + old_num_vars + i] = -1;
+			}
+			else {
+				dict->var_bounds.upper[i + old_num_vars] = infeasible.infeasible_rows[i].infeasible_amount;
+				dict->matrix[infeasible.infeasible_rows[i].infeasible_row * dict->num_vars + old_num_vars + i] = 1;
+			}
+		}
+
+		dictionary_view(dict);
+		printf("FOO\n");
+		pivot_kernel(dict);
+		printf("[[[[[After init pivot:]]]]]\n");
+
+		dictionary_view(dict);
+
+
+		//dictionary_resize(dict, old_num_vars, old_num_cons);
+		memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
+		//dict->objective = old_objective;
+		for (i = 0; i < dict->num_vars; ++i) {
+			if (dict->col_labels[i] > (old_num_vars + old_num_cons)) {
+				dict->var_bounds.lower[i] = 0;
+				dict->var_bounds.upper[i] = 0;
+			}
+		}
+		for (i = 0; i < dict->num_cons; ++i) {
+			if (dict->row_labels[i] > (old_num_vars + old_num_cons)) {
+				dict->con_bounds.lower[i] = 0;
+				dict->con_bounds.upper[i] = 0;
+			}
+		}
+		printf("Resetting to original objective\n");
+		dictionary_view(dict);
+	}
+	else {
+		// dictionary is feasible, return
+		return;
+	}
+}
+
 void dictionary_init_struct(dictionary* dict) {
 	int index;
 	
@@ -83,6 +210,16 @@ bool dictionary_is_final(dictionary* dict) {
 	}
 	
 	return TRUE;
+}
+
+unsigned dictionary_get_num_unbounded_vars(dictionary *dict) {
+	int i;
+	unsigned num_unbounded_vars = 0;
+	for (i = 0; i < dict->num_vars; ++i) {
+		if (is_unbounded_var_at_index(dict, i))
+			++num_unbounded_vars;
+	}
+	return num_unbounded_vars;
 }
 
 /*
@@ -173,6 +310,111 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index, rest_t new
 	
 	// Free our temporary row.
 	free(tmp_row);
+}
+
+void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
+	int next_split_var = starting_split_var;
+
+	int i;
+	for (i = 0; i < starting_split_var; ++i) {
+		if (is_unbounded_var_at_index(dict, i)) {
+			// split var
+			int j;
+			for (j = 0; j < dict->num_cons; ++j) {
+				// A bit silly, but don't negate zeros because it looks ugly
+				if (dict->matrix[j * dict->num_vars + i])
+					dict->matrix[j * dict->num_vars + next_split_var] =
+						-dict->matrix[j * dict->num_vars + i];
+				else
+					dict->matrix[j * dict->num_vars + next_split_var] =
+						dict->matrix[j * dict->num_vars + i];
+			}
+			dict->var_bounds.upper[next_split_var] = 0;
+			dict->var_bounds.lower[next_split_var] = -INFINITY;
+			dict->var_bounds.upper[i] = INFINITY;
+			dict->var_bounds.lower[i] = 0;
+
+			dict->var_rests[next_split_var] = UPPER;
+			dict->var_rests[i] = LOWER;
+
+			dict->objective[next_split_var] = -dict->objective[i];
+
+			dict->col_labels[next_split_var] = 1 + next_split_var + dict->num_cons;
+			dict->split_vars[dict->col_labels[i]] = dict->col_labels[next_split_var];
+
+			++next_split_var;
+		}
+	}
+}
+
+void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons) {
+	//In case we want to snapshot the previous pointers, don't realloc them.
+	//Instead, just create a new dictionary and replace the pointers.
+
+	double *new_objective = malloc(sizeof(double) * new_num_vars);
+	memset(new_objective, 0, sizeof(double) * new_num_vars);
+	memcpy(new_objective, dict->objective, sizeof(double) * min_int(new_num_vars, dict->num_vars));
+	dict->objective = new_objective;
+
+	int *new_col_labels = malloc(sizeof(int) * new_num_vars);
+	memset(new_col_labels, 0, sizeof(int) * new_num_vars);
+	memcpy(new_col_labels, dict->col_labels, sizeof(int) * min_int(new_num_vars, dict->num_vars));
+	dict->col_labels = new_col_labels;
+
+	rest_t* new_var_rests = malloc(sizeof(rest_t) * new_num_vars);
+	memset(new_var_rests, 0, sizeof(rest_t) * new_num_vars);
+	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * min_int(new_num_vars, dict->num_vars));
+	dict->var_rests = new_var_rests;
+
+	int *new_split_vars = malloc(sizeof(int) * new_num_vars);
+	memset(new_split_vars, 0, sizeof(int) * new_num_vars);
+	memcpy(new_split_vars, dict->split_vars, sizeof(int) * min_int(new_num_vars, dict->num_vars));
+	dict->split_vars = new_split_vars;
+
+	bounds_t new_var_bounds;
+	new_var_bounds.lower = malloc(sizeof(double) * new_num_vars);
+	memset(new_var_bounds.lower, 0, (sizeof(double) * new_num_vars));
+
+	new_var_bounds.upper = malloc(sizeof(double) * new_num_vars);
+	memset(new_var_bounds.upper, 0, (sizeof(double) * new_num_vars));
+
+	memcpy(new_var_bounds.lower, dict->var_bounds.lower, sizeof(double) *
+			min_int(new_num_vars, dict->num_vars));
+	memcpy(new_var_bounds.upper, dict->var_bounds.upper, sizeof(double) *
+			min_int(new_num_vars, dict->num_vars));
+	dict->var_bounds = new_var_bounds;
+
+	int *new_row_labels = malloc(sizeof(int) * new_num_cons);
+	memset(new_row_labels, 0, (sizeof(int) * new_num_cons));
+	memcpy(new_row_labels, dict->row_labels, sizeof(int) * min_int(new_num_cons, dict->num_cons));
+	dict->row_labels = new_row_labels;
+
+	bounds_t new_con_bounds;
+	new_con_bounds.lower = malloc(sizeof(double) * new_num_cons);
+	memset(new_con_bounds.lower, 0, (sizeof(double) * new_num_cons));
+
+	new_con_bounds.upper = malloc(sizeof(double) * new_num_cons);
+	memset(new_con_bounds.upper, 0, (sizeof(double) * new_num_cons));
+
+	memcpy(new_con_bounds.lower, dict->con_bounds.lower, sizeof(double) *
+			min_int(new_num_cons, dict->num_cons));
+	memcpy(new_con_bounds.upper, dict->con_bounds.upper, sizeof(double) *
+			min_int(new_num_cons, dict->num_cons));
+	dict->con_bounds = new_con_bounds;
+
+	double* new_matrix = malloc(sizeof(double) * new_num_vars * new_num_cons);
+	memset (new_matrix, 0, sizeof(double) * new_num_vars * new_num_cons);
+
+	int i;
+	for (i = 0; i < min_int(dict->num_cons, new_num_cons); ++i) {
+		memcpy(new_matrix + i * new_num_vars, dict->matrix + i * dict->num_vars,
+				sizeof(double) * min_int(new_num_vars, dict->num_vars));
+	}
+
+	dict->matrix = new_matrix;
+
+	dict->num_cons = new_num_cons;
+	dict->num_vars = new_num_vars;
 }
 
 /*
@@ -352,6 +594,19 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 	}
 }
 
+bool is_unbounded_var_at_index(dictionary *dict, int index) {
+	/* Not sure if you're technically allowed to check equality with infinity,
+	 * but since we're the ones setting infinity and not trying to create new
+	 * infinities, perhaps this is allowed?
+	 */
+	if (dict->var_bounds.upper[index] == INFINITY &&
+			dict->var_bounds.lower[index] == -INFINITY)
+
+		return TRUE;
+	else
+		return FALSE;
+}
+
 /*
  * FIXME:
  * 	- Implement Bland's Rule - DONE
@@ -420,272 +675,5 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 				result->flip		= FALSE;
 			}
 		}
-	}
-}
-
-/*
- * INIT CODE
- */
-
-infeasible_set_t dictionary_infeasible_rows(dictionary *dict) {
-	//This can be done a little less naively, but do it naively for now
-	int i, j;
-	infeasible_set_t infeasible_set;
-	infeasible_set.infeasible_rows = 0;
-	infeasible_set.num_infeasible_rows = 0;
-
-	for (j = 0; j < dict->num_cons; ++j) {
-		double constraint_sum = 0.0;
-		for (i = 0; i < dict->num_vars; ++i) {
-			switch (dict->var_rests[i]) {
-			case UPPER:
-				constraint_sum += dict->matrix[i + j * dict->num_vars] * dict->var_bounds.upper[i];
-				break;
-			case LOWER:
-				constraint_sum += dict->matrix[i + j * dict->num_vars] * dict->var_bounds.lower[i];
-				break;
-			}
-		}
-		if ((constraint_sum < dict->con_bounds.lower[j]) ||
-				(constraint_sum > dict->con_bounds.upper[j])) {
-
-			//add infeasible
-			++infeasible_set.num_infeasible_rows;
-			if (infeasible_set.num_infeasible_rows) {
-				infeasible_set.infeasible_rows = realloc(infeasible_set.infeasible_rows,
-						infeasible_set.num_infeasible_rows * sizeof(infeasible_row_t));
-			}
-			else {
-				infeasible_set.infeasible_rows = malloc(infeasible_set.num_infeasible_rows *
-						sizeof(infeasible_row_t));
-			}
-
-			if (constraint_sum < dict->con_bounds.lower[j]) {
-				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_row = j;
-				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_amount =
-						dict->con_bounds.lower[j] - constraint_sum;
-			}
-			else if (constraint_sum > dict->con_bounds.upper[j]) {
-				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_row = j;
-				infeasible_set.infeasible_rows[infeasible_set.num_infeasible_rows-1].infeasible_amount =
-						dict->con_bounds.upper[j] - constraint_sum;
-			}
-		}
-	}
-
-	return infeasible_set;
-}
-
-int min_int(int left, int right) {
-	if (right < left)
-		return right;
-	else
-		return left;
-}
-
-void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons) {
-	//In case we want to snapshot the previous pointers, don't realloc them.
-	//Instead, just create a new dictionary and replace the pointers.
-
-	double *new_objective = malloc(sizeof(double) * new_num_vars);
-	memset(new_objective, 0, sizeof(double) * new_num_vars);
-	memcpy(new_objective, dict->objective, sizeof(double) * min_int(new_num_vars, dict->num_vars));
-	dict->objective = new_objective;
-
-	int *new_col_labels = malloc(sizeof(int) * new_num_vars);
-	memset(new_col_labels, 0, sizeof(int) * new_num_vars);
-	memcpy(new_col_labels, dict->col_labels, sizeof(int) * min_int(new_num_vars, dict->num_vars));
-	dict->col_labels = new_col_labels;
-
-	rest_t* new_var_rests = malloc(sizeof(rest_t) * new_num_vars);
-	memset(new_var_rests, 0, sizeof(rest_t) * new_num_vars);
-	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * min_int(new_num_vars, dict->num_vars));
-	dict->var_rests = new_var_rests;
-
-	int *new_split_vars = malloc(sizeof(int) * new_num_vars);
-	memset(new_split_vars, 0, sizeof(int) * new_num_vars);
-	memcpy(new_split_vars, dict->split_vars, sizeof(int) * min_int(new_num_vars, dict->num_vars));
-	dict->split_vars = new_split_vars;
-
-	bounds_t new_var_bounds;
-	new_var_bounds.lower = malloc(sizeof(double) * new_num_vars);
-	memset(new_var_bounds.lower, 0, (sizeof(double) * new_num_vars));
-
-	new_var_bounds.upper = malloc(sizeof(double) * new_num_vars);
-	memset(new_var_bounds.upper, 0, (sizeof(double) * new_num_vars));
-
-	memcpy(new_var_bounds.lower, dict->var_bounds.lower, sizeof(double) *
-			min_int(new_num_vars, dict->num_vars));
-	memcpy(new_var_bounds.upper, dict->var_bounds.upper, sizeof(double) *
-			min_int(new_num_vars, dict->num_vars));
-	dict->var_bounds = new_var_bounds;
-
-	int *new_row_labels = malloc(sizeof(int) * new_num_cons);
-	memset(new_row_labels, 0, (sizeof(int) * new_num_cons));
-	memcpy(new_row_labels, dict->row_labels, sizeof(int) * min_int(new_num_cons, dict->num_cons));
-	dict->row_labels = new_row_labels;
-
-	bounds_t new_con_bounds;
-	new_con_bounds.lower = malloc(sizeof(double) * new_num_cons);
-	memset(new_con_bounds.lower, 0, (sizeof(double) * new_num_cons));
-
-	new_con_bounds.upper = malloc(sizeof(double) * new_num_cons);
-	memset(new_con_bounds.upper, 0, (sizeof(double) * new_num_cons));
-
-	memcpy(new_con_bounds.lower, dict->con_bounds.lower, sizeof(double) *
-			min_int(new_num_cons, dict->num_cons));
-	memcpy(new_con_bounds.upper, dict->con_bounds.upper, sizeof(double) *
-			min_int(new_num_cons, dict->num_cons));
-	dict->con_bounds = new_con_bounds;
-
-	double* new_matrix = malloc(sizeof(double) * new_num_vars * new_num_cons);
-	memset (new_matrix, 0, sizeof(double) * new_num_vars * new_num_cons);
-
-	int i;
-	for (i = 0; i < min_int(dict->num_cons, new_num_cons); ++i) {
-		memcpy(new_matrix + i * new_num_vars, dict->matrix + i * dict->num_vars,
-				sizeof(double) * min_int(new_num_vars, dict->num_vars));
-	}
-
-	dict->matrix = new_matrix;
-
-	dict->num_cons = new_num_cons;
-	dict->num_vars = new_num_vars;
-}
-
-bool is_unbounded_var_at_index(dictionary *dict, int index) {
-	/* Not sure if you're technically allowed to check equality with infinity,
-	 * but since we're the ones setting infinity and not trying to create new
-	 * infinities, perhaps this is allowed?
-	 */
-	if (dict->var_bounds.upper[index] == INFINITY &&
-			dict->var_bounds.lower[index] == -INFINITY)
-
-		return TRUE;
-	else
-		return FALSE;
-}
-
-unsigned dictionary_get_num_unbounded_vars(dictionary *dict) {
-	int i;
-	unsigned num_unbounded_vars = 0;
-	for (i = 0; i < dict->num_vars; ++i) {
-		if (is_unbounded_var_at_index(dict, i))
-			++num_unbounded_vars;
-	}
-	return num_unbounded_vars;
-}
-
-
-void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
-	int next_split_var = starting_split_var;
-
-	int i;
-	for (i = 0; i < starting_split_var; ++i) {
-		if (is_unbounded_var_at_index(dict, i)) {
-			// split var
-			int j;
-			for (j = 0; j < dict->num_cons; ++j) {
-				// A bit silly, but don't negate zeros because it looks ugly
-				if (dict->matrix[j * dict->num_vars + i])
-					dict->matrix[j * dict->num_vars + next_split_var] =
-						-dict->matrix[j * dict->num_vars + i];
-				else
-					dict->matrix[j * dict->num_vars + next_split_var] =
-						dict->matrix[j * dict->num_vars + i];
-			}
-			dict->var_bounds.upper[next_split_var] = 0;
-			dict->var_bounds.lower[next_split_var] = -INFINITY;
-			dict->var_bounds.upper[i] = INFINITY;
-			dict->var_bounds.lower[i] = 0;
-
-			dict->var_rests[next_split_var] = UPPER;
-			dict->var_rests[i] = LOWER;
-
-			dict->objective[next_split_var] = -dict->objective[i];
-
-			dict->col_labels[next_split_var] = 1 + next_split_var + dict->num_cons;
-			dict->split_vars[dict->col_labels[i]] = dict->col_labels[next_split_var];
-
-			++next_split_var;
-		}
-	}
-}
-
-void dictionary_init(dictionary* dict) {
-	unsigned num_unbounded_vars = dictionary_get_num_unbounded_vars(dict);
-
-	dictionary_view(dict);
-
-	int pre_resize_num_vars = dict->num_vars;
-	dictionary_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
-	dictionary_populate_split_vars(dict, pre_resize_num_vars);
-
-	infeasible_set_t infeasible = dictionary_infeasible_rows(dict);
-	
-	if (infeasible.num_infeasible_rows) {
-		// perform initialization
-		double *old_objective = dict->objective;
-		int old_num_vars = dict->num_vars;
-		int old_num_cons = dict->num_cons;
-
-		printf("Number infeasible rows: %i\n", infeasible.num_infeasible_rows);
-		int i;
-		for (i = 0; i < infeasible.num_infeasible_rows; ++i) {
-			printf("  row: %i by %f\n", infeasible.infeasible_rows[i].infeasible_row,
-					infeasible.infeasible_rows[i].infeasible_amount);
-		}
-		dictionary_resize(dict, dict->num_vars + infeasible.num_infeasible_rows,
-				dict->num_cons);
-
-		for (i = 0; i < old_num_vars; ++i) {
-			dict->objective[i] = 0;
-		}
-		for (i = 0; i < infeasible.num_infeasible_rows; ++i) {
-			dict->objective[i + old_num_vars] = -1;
-			dict->var_bounds.lower[i + old_num_vars] = 0;
-			dict->col_labels[old_num_vars + i] = 1 + i + (dict->num_vars - infeasible.num_infeasible_rows) + dict->num_cons;
-			dict->var_rests[old_num_vars + i] = UPPER;
-			if (infeasible.infeasible_rows[i].infeasible_amount < 0) {
-				dict->var_bounds.upper[i + old_num_vars] = infeasible.infeasible_rows[i].infeasible_amount * -1;
-
-				//FIXME: During shrinking this can segfault
-				dict->matrix[infeasible.infeasible_rows[i].infeasible_row * dict->num_vars + old_num_vars + i] = -1;
-			}
-			else {
-				dict->var_bounds.upper[i + old_num_vars] = infeasible.infeasible_rows[i].infeasible_amount;
-				dict->matrix[infeasible.infeasible_rows[i].infeasible_row * dict->num_vars + old_num_vars + i] = 1;
-			}
-		}
-
-		dictionary_view(dict);
-		printf("FOO\n");
-		pivot_kernel(dict);
-		printf("[[[[[After init pivot:]]]]]\n");
-
-		dictionary_view(dict);
-
-
-		//dictionary_resize(dict, old_num_vars, old_num_cons);
-		memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
-		//dict->objective = old_objective;
-		for (i = 0; i < dict->num_vars; ++i) {
-			if (dict->col_labels[i] > (old_num_vars + old_num_cons)) {
-				dict->var_bounds.lower[i] = 0;
-				dict->var_bounds.upper[i] = 0;
-			}
-		}
-		for (i = 0; i < dict->num_cons; ++i) {
-			if (dict->row_labels[i] > (old_num_vars + old_num_cons)) {
-				dict->con_bounds.lower[i] = 0;
-				dict->con_bounds.upper[i] = 0;
-			}
-		}
-		printf("Resetting to original objective\n");
-		dictionary_view(dict);
-	}
-	else {
-		// dictionary is feasible, return
-		return;
 	}
 }
