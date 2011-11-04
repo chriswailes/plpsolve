@@ -83,7 +83,8 @@ static void load_lp_file(dictionary *dict) {
 		// Pick the initial resting bounds for the variables.
 		int index;
 		for (index = 0; index < dict->num_vars; ++index) {
-			if ((dict->objective[index] >= 0) && (dict->var_bounds.upper[index] < INFINITY)) {
+			if (((dict->objective[index] >= 0) && (dict->var_bounds.upper[index] < INFINITY)) ||
+					(dict->var_bounds.lower[index] == -INFINITY)){
 				dict->var_rests[index] = UPPER;
 			} else {
 				dict->var_rests[index] = LOWER;

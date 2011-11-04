@@ -276,9 +276,23 @@ void dictionary_init(dictionary* dict) {
 
 		dictionary_view(dict);
 
-		dictionary_resize(dict, old_num_vars, old_num_cons);
-		dict->objective = old_objective;
-		printf("Resetting to original dictionary\n");
+
+		//dictionary_resize(dict, old_num_vars, old_num_cons);
+		memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
+		//dict->objective = old_objective;
+		for (i = 0; i < dict->num_vars; ++i) {
+			if (dict->col_labels[i] > (old_num_vars + old_num_cons)) {
+				dict->var_bounds.lower[i] = 0;
+				dict->var_bounds.upper[i] = 0;
+			}
+		}
+		for (i = 0; i < dict->num_cons; ++i) {
+			if (dict->row_labels[i] > (old_num_vars + old_num_cons)) {
+				dict->con_bounds.lower[i] = 0;
+				dict->con_bounds.upper[i] = 0;
+			}
+		}
+		printf("Resetting to original objective\n");
 		dictionary_view(dict);
 	}
 	else {
