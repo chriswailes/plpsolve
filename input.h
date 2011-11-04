@@ -12,6 +12,8 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+void load_lp_file(dictionary* dict);
+
 void load_constraint_bounds(FILE* in, dictionary* dict);
 void load_matrix(FILE* in, dictionary* dict);
 void load_objective(FILE* in, dictionary* dict);

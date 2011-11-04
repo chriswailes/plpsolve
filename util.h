@@ -43,5 +43,6 @@ typedef struct {
 } config;
 
 void get_config(int argc, char** argv);
+void write_lp_mathprog(dictionary *dict, const char *filename);
 
 #endif

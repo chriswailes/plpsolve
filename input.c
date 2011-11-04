@@ -9,11 +9,47 @@
 // Standard Includes
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 // Project Includes
 #include "dictionary.h"
 #include "input.h"
 #include "util.h"
+
+static void load_lp_file(dictionary* dict) {
+	int index;
+	FILE* in;
+	
+	if ((in = fopen(cfg.filename, "rt")) != NULL) {
+		fscanf(in, "%i,%i\n", &dict->num_cons, &dict->num_vars);
+		
+		// Initialize our dictionary struct.
+		dictionary_init_struct(dict);
+		
+		// Load values from input file.
+		load_objective(in, dict);
+		load_matrix(in, dict);
+		load_constraint_bounds(in, dict);
+		load_var_bounds(in, dict);
+		
+		// Pick the initial resting bounds for the variables.
+		for (index = 0; index < dict->num_vars; ++index) {
+			if ((dict->objective[index] >= 0 && dict->var_bounds.upper[index] < INFINITY) || (dict->var_bounds.lower[index] == -INFINITY)) {
+				dict->var_rests[index] = UPPER;
+				
+			} else {
+				dict->var_rests[index] = LOWER;
+			}
+		}
+
+		// Close the input file.
+		fclose(in);
+		
+	} else {
+		printf("Can't open file %s\n", cfg.filename);
+		exit(-1);
+	}
+}
 
 void load_constraint_bounds(FILE* in, dictionary* dict) {
 	unsigned i;
