@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 	}
 
 	// Initialize the dictionary proper.
-	//dictionary_init(&dict);
+	dictionary_init(&dict);
 	
 	switch (cfg.method) {
 		case PIVOT:

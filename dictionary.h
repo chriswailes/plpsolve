@@ -81,6 +81,7 @@ typedef struct {
 	rest_t* var_rests;
 } dictionary;
 
+bool is_unbounded_var_at_index(dictionary *dict, int index);
 void select_entering_and_leaving(dictionary* dict, elr_t* result);
 
 void				dictionary_free(dictionary* dict);
@@ -88,7 +89,9 @@ infeasible_set_t	dictionary_infeasible_rows(dictionary *dict);
 void				dictionary_init(dictionary* dict);
 void				dictionary_init_struct(dictionary* dict);
 bool				dictionary_is_final(dictionary* dict);
+unsigned			dictionary_get_num_unbounded_vars(dictionary *dict);
 void				dictionary_pivot(dictionary* dict, int col_index, int row_index, rest_t new_rest);
+void				dictionary_populate_split_vars(dictionary* dict, int starting_split_var);
 void				dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons);
 viable_t			dictionary_var_can_enter(dictionary* dict, int col_index);
 void				dictionary_var_can_leave(dictionary* dict, clr_t* result, int col_index, int row_index);
