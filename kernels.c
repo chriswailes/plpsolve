@@ -12,25 +12,32 @@
 #include "dictionary.h"
 #include "kernels.h"
 
+// Global Variables
+
+extern config cfg;
+
 // Functions
 
 void pivot_kernel(dictionary* dict) {
-	int e_and_l[2];
+	unsigned int iters = 0;
+	elr_t el_result;
 	
-	//~while (!dictionary_is_final(dict)) {
-		select_entering_and_leaving(dict, e_and_l);
-		printf("BAR - Entering: %d Leaving: %d\n", e_and_l[0], e_and_l[1]);
+	while (!dictionary_is_final(dict)) {
+		select_entering_and_leaving(dict, &el_result);
 		
-		/*
-		 * If the leaving variable is -1 we need to swap the bounds on the
-		 * selected entering variable.  Otherwise we need to pivot on the
-		 * entering and leaving variables.
-		 */
-		if (e_and_l[1] == -1) {
-			dict->var_rests[e_and_l[0]] = (dict->var_rests[e_and_l[0]] == UPPER ? LOWER : UPPER);
+		//~printf("Flip: %-5s Entering: %d Leaving: %d\n", el_result.flip ? "TRUE" : "FALSE", el_result.entering, el_result.leaving);
+		
+		if (el_result.flip) {
+			dict->var_rests[el_result.entering] = el_result.new_rest;
 			
 		} else {
-			dictionary_pivot(dict, e_and_l[0], e_and_l[1]);
+			dictionary_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest);
 		}
-	//~}
+		
+		++iters;
+	}
+	
+	if (cfg.verbose) {
+		printf("Simplex took %d iterations.\n", iters);
+	}
 }

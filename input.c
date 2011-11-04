@@ -16,7 +16,11 @@
 #include "input.h"
 #include "util.h"
 
-static void load_lp_file(dictionary* dict) {
+// Global Variables
+
+extern config cfg;
+
+void load_lp_file(dictionary* dict) {
 	int index;
 	FILE* in;
 	

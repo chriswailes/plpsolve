@@ -6,11 +6,11 @@
  * Description:	Header file for input manipulation.
  */
 
-// Project Includes
-#include "dictionary.h"
-
 #ifndef INPUT_H
 #define INPUT_H
+
+// Project Includes
+#include "dictionary.h"
 
 void load_lp_file(dictionary* dict);
 

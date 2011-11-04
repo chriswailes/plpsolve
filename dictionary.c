@@ -7,6 +7,7 @@
  */
 
 // Standard Incldues
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -99,7 +100,7 @@ bool dictionary_is_final(dictionary* dict) {
  * Then to (3):
  * 	xn = (c1/-cj)*x1 + (c2/-cj)*x2 + (1/-cj)*xm + ... + (cn/-cj)*xn
  */
-void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
+void dictionary_pivot(dictionary* dict, int col_index, int row_index, rest_t new_rest) {
 	int index0, index1;
 	
 	double  coefficient, swap;
@@ -168,17 +169,28 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	/*
 	 * Set the new resting bound appropriately.
 	 */
-	dict->var_rests[col_index] = (dict->objective[col_index] < 0 ? LOWER : UPPER);
+	dict->var_rests[col_index] = new_rest;
 	
 	// Free our temporary row.
 	free(tmp_row);
 }
 
-bool dictionary_var_can_enter(dictionary* dict, int col_index) {
-	if ((dict->objective[col_index] < 0 && dict->var_rests[col_index] == UPPER) || (dict->objective[col_index] > 0 && dict->var_rests[col_index] == LOWER)) {
-		return TRUE;
+/*
+ * Return should be Good, Bad, and Nope
+ */
+viable_t dictionary_var_can_enter(dictionary* dict, int col_index) {
+	//~printf("Objective: %f Lower: %f Upper: %f\n", dict->objective[col_index], dict->var_bounds.lower[col_index], dict->var_bounds.upper[col_index]);
+	
+	if (dict->objective[col_index] == 0) {
+		return BAD;
+		
+	} else if ((dict->objective[col_index] < 0 && dict->var_rests[col_index] == UPPER) || (dict->objective[col_index] > 0 && dict->var_rests[col_index] == LOWER)) {
+		//~printf("Returning GOOD\n");
+		return GOOD;
+		
 	} else {
-		return FALSE;
+		//~printf("Returning NOPE\n");
+		return NOPE;
 	}
 }
 
@@ -186,18 +198,17 @@ bool dictionary_var_can_enter(dictionary* dict, int col_index) {
  * Determines if a variable (referenced by the corresponding row in the matrix)
  * can leave when a given variable (referenced by the corresponding column in
  * the matrix) is entering.
- * 
- * If the variable can't leave 0 is returned.  If it can leave, the amount that
- * it constrains the entering variable is returned.
  */
-double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) {
+void dictionary_var_can_leave(dictionary* dict, clr_t* result, int col_index, int row_index) {
 	int index;
 	double accum = 0;
-	double t_coef, tmp;
+	double t_coef;
 	double* row = &dict->matrix[row_index * dict->num_vars];
 	
+	// If the entering variable's coefficient is 0 this variable can't leave.
 	if (row[col_index] == 0) {
-		return -1;
+		result->viable = NOPE;
+		return;
 	}
 	
 	/*
@@ -217,18 +228,17 @@ double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) 
 	 * entering variable's value.
 	 */
 	if (dict->con_bounds.lower[row_index] < accum && t_coef < 0) {
-		tmp = (dict->con_bounds.lower[row_index] - accum) / t_coef;
-		printf("BAZ 0: %f t_coef: %f used_bound: %f accum: %f\n", tmp, t_coef, dict->con_bounds.lower[row_index], accum);
-		return tmp;
+		result->viable		= GOOD;
+		result->constraint	= (dict->con_bounds.lower[row_index] - accum) / t_coef;
+		result->new_rest	= LOWER;
 		
 	} else if (accum < dict->con_bounds.upper[row_index] && t_coef > 0) {
-		tmp = (dict->con_bounds.upper[row_index] - accum) / t_coef;
-		printf("BAZ 1: %f t_coef: %f used_bound: %f accum: %f\n", tmp, t_coef, dict->con_bounds.lower[row_index], accum);
-		return tmp;
+		result->viable		= GOOD;
+		result->constraint	= (dict->con_bounds.upper[row_index] - accum) / t_coef;
+		result->new_rest	= UPPER;
 		
 	} else {
-		printf("BAZ 2\n");
-		return -1;
+		result->viable = NOPE;
 	}
 }
 
@@ -297,13 +307,15 @@ void dictionary_view(const dictionary* dict) {
 }
 
 void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
-	int i;
-	double objective = 0.0;
+	int i, j, k;
+	double objective = 0.0, var_total = 0.0;
+	
+	bool is_done = FALSE;
+	
 	for (i = 0; i < dict->num_vars; ++i) {
 		if (dict->var_rests[i] == LOWER) {
 			objective += dict->objective[i] * dict->var_bounds.lower[i];
-		}
-		else {
+		} else {
 			objective += dict->objective[i] * dict->var_bounds.upper[i];
 		}
 	}
@@ -311,30 +323,25 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 	printf("Objective: %f\n", objective);
 
 	for (i = 1; i <= num_orig_vars; ++i) {
-		int j;
-		bool is_done = FALSE;
 		for (j = 0; j < dict->num_vars; ++j) {
 			if (dict->col_labels[j] == i) {
 				if (dict->var_rests[j] == LOWER) {
 					printf("x%i = %f\n", i, dict->var_bounds.lower[j]);
-				}
-				else {
+				} else {
 					printf("x%i = %f\n", i, dict->var_bounds.upper[j]);
 				}
 				is_done = TRUE;
 				break;
 			}
 		}
+		
 		if (!is_done) {
 			for (j = 0; j < dict->num_cons; ++j) {
 				if (dict->row_labels[j] == i) {
-					int k;
-					double var_total = 0.0;
 					for (k = 0; k < dict->num_vars; ++k) {
 						if (dict->var_rests[k] == LOWER) {
 							var_total += dict->var_bounds.lower[k] * dict->matrix[j * dict->num_vars + k];
-						}
-						else {
+						} else {
 							var_total += dict->var_bounds.upper[k] * dict->matrix[j * dict->num_vars + k];
 						}
 					}
@@ -347,26 +354,31 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 
 /*
  * FIXME:
- * 	- Implement Bland's Rule
+ * 	- Implement Bland's Rule - DONE
  * 	- Implement ProfY's Rule
  * 	- Change so that if no leaving variable is found for an entering variable we try again.
  */
-void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
-	int index, min_sub = -1;
-	double tmp, max_constraint;
+void select_entering_and_leaving(dictionary* dict, elr_t* result) {
+	int index, min_sub = INT_MAX;
+	double max_constraint;
 	
-	bool flip;
+	clr_t cl_result;
 	
 	// Select the entering variable.
 	for (index = 0; index < dict->num_vars; ++index) {
-		if (dictionary_var_can_enter(dict, index)) {
+		//~printf("Checking for entering variable at index %d\n", index);
+		//~printf("var_can_enter returned %d\n", dictionary_var_can_enter(dict, index));
+		
+		if (dictionary_var_can_enter(dict, index) != NOPE) {
 			if (cfg.rule == BLANDS) {
-				if (min_sub == -1 || dict->col_labels[index] < min_sub) {
-					e_and_l[0]	= index;
-					min_sub		= dict->col_labels[index];
+				if (dict->col_labels[index] < min_sub) {
+					result->entering	= index;
+					min_sub			= dict->col_labels[index];
 				}
+				
 			} else {
-				e_and_l[0] = index;
+				//~printf("Found an entering variable at index %d\n", index);
+				result->entering = index;
 				break;
 			}
 		}
@@ -375,41 +387,39 @@ void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 	/*
 	 * Pick the leaving variable.
 	 */
-	
-	if (dict->objective[e_and_l[0]] < 0 && dict->var_rests[e_and_l[0]] == UPPER) {
-		max_constraint	= dict->var_bounds.lower[e_and_l[0]];
-		flip			= TRUE;
+	if (dict->objective[result->entering] < 0 && dict->var_rests[result->entering] == UPPER && dict->var_bounds.upper[result->entering] != INFINITY) {
+		max_constraint = dict->var_bounds.lower[result->entering];
 		
-	} else if (dict->objective[e_and_l[0]] > 0 && dict->var_rests[e_and_l[0]] == LOWER) {
-		max_constraint	= dict->var_bounds.upper[e_and_l[0]];
-		flip			= TRUE;
+		result->flip		= TRUE;
+		result->new_rest	= LOWER;
+		
+	} else if (dict->objective[result->entering] > 0 && dict->var_rests[result->entering] == LOWER && dict->var_bounds.lower[result->entering] != -INFINITY) {
+		max_constraint = dict->var_bounds.upper[result->entering];
+		
+		result->flip		= TRUE;
+		result->new_rest	= UPPER;
 		
 	} else {
-		printf("BAF 0\n");
-		max_constraint	= INFINITY;
-		flip			= FALSE;
+		max_constraint = INFINITY;
+		result->flip	= FALSE;
 	}
-	
-	printf("BAF 1: %f\n", max_constraint);
 	
 	for (index = 0; index < dict->num_cons; ++index) {
-		tmp = dictionary_var_can_leave(dict, e_and_l[0], index);
+		dictionary_var_can_leave(dict, &cl_result, result->entering, index);
 		
-		if (tmp != -1) {
+		if (cl_result.viable) {
 			// Found a new, more constraining, choice.
-			if (tmp < max_constraint || (tmp == max_constraint && dict->row_labels[index] < min_sub)) {
-				printf("BAF 2: %d - %f\n", index, tmp);
+			if (cl_result.constraint < max_constraint ||
+				(cfg.rule == BLANDS && (cl_result.constraint == max_constraint && dict->row_labels[index] < min_sub))) {
 				
-				max_constraint	= tmp;
-				e_and_l[1]	= index;
-				flip			= FALSE;
-				min_sub		= dict->row_labels[index];
+				max_constraint		= cl_result.constraint;
+				min_sub			= dict->row_labels[index];
+				
+				result->leaving	= index;
+				result->new_rest	= cl_result.new_rest;
+				result->flip		= FALSE;
 			}
 		}
-	}
-	
-	if (flip) {
-		e_and_l[1] = -1;
 	}
 }
 
