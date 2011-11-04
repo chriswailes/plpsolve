@@ -580,6 +580,8 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 		if (!is_done) {
 			for (j = 0; j < dict->num_cons; ++j) {
 				if (dict->row_labels[j] == i) {
+					var_total = 0.0;
+
 					for (k = 0; k < dict->num_vars; ++k) {
 						if (dict->var_rests[k] == LOWER) {
 							var_total += dict->var_bounds.lower[k] * dict->matrix[j * dict->num_vars + k];
