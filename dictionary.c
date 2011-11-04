@@ -323,6 +323,7 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 	printf("Objective: %f\n", objective);
 
 	for (i = 1; i <= num_orig_vars; ++i) {
+		is_done = FALSE;
 		for (j = 0; j < dict->num_vars; ++j) {
 			if (dict->col_labels[j] == i) {
 				if (dict->var_rests[j] == LOWER) {
@@ -331,7 +332,6 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 					printf("x%i = %f\n", i, dict->var_bounds.upper[j]);
 				}
 				is_done = TRUE;
-				break;
 			}
 		}
 		
