@@ -7,10 +7,10 @@
  */
 
 // Standard Incldues
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 
 // Project Includes
 #include "dictionary.h"
@@ -270,6 +270,7 @@ void dictionary_init(dictionary* dict) {
 		}
 
 		dictionary_view(dict);
+		printf("FOO\n");
 		pivot_kernel(dict);
 		printf("[[[[[After init pivot:]]]]]\n");
 
@@ -413,6 +414,11 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index) {
 	dict->var_bounds.lower[col_index] = dict->con_bounds.lower[row_index];
 	dict->con_bounds.lower[row_index] = swap;
 	
+	/*
+	 * Set the new resting bound appropriately.
+	 */
+	dict->var_rests[col_index] = (dict->objective[col_index] < 0 ? LOWER : UPPER);
+	
 	// Free our temporary row.
 	free(tmp_row);
 }
@@ -436,8 +442,12 @@ bool dictionary_var_can_enter(dictionary* dict, int col_index) {
 double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) {
 	int index;
 	double accum = 0;
-	double t_coef;
+	double t_coef, tmp;
 	double* row = &dict->matrix[row_index * dict->num_vars];
+	
+	if (row[col_index] == 0) {
+		return -1;
+	}
 	
 	/*
 	 * Accumulate the constant given the resting bounds for the non-basic
@@ -456,10 +466,17 @@ double dictionary_var_can_leave(dictionary* dict, int col_index, int row_index) 
 	 * entering variable's value.
 	 */
 	if (dict->con_bounds.lower[row_index] < accum && t_coef < 0) {
-		return (dict->con_bounds.lower[row_index] - accum) / t_coef;
+		tmp = (dict->con_bounds.lower[row_index] - accum) / t_coef;
+		printf("BAZ 0: %f t_coef: %f used_bound: %f accum: %f\n", tmp, t_coef, dict->con_bounds.lower[row_index], accum);
+		return tmp;
+		
 	} else if (accum < dict->con_bounds.upper[row_index] && t_coef > 0) {
-		return (dict->con_bounds.upper[row_index] - accum) / t_coef;
+		tmp = (dict->con_bounds.upper[row_index] - accum) / t_coef;
+		printf("BAZ 1: %f t_coef: %f used_bound: %f accum: %f\n", tmp, t_coef, dict->con_bounds.lower[row_index], accum);
+		return tmp;
+		
 	} else {
+		printf("BAZ 2\n");
 		return -1;
 	}
 }
@@ -577,6 +594,12 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 	}
 }
 
+/*
+ * FIXME:
+ * 	- Implement Bland's Rule
+ * 	- Implement ProfY's Rule
+ * 	- Change so that if no leaving variable is found for an entering variable we try again.
+ */
 void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 	int index, min_sub = -1;
 	double tmp, max_constraint;
@@ -587,7 +610,10 @@ void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 	for (index = 0; index < dict->num_vars; ++index) {
 		if (dictionary_var_can_enter(dict, index)) {
 			if (cfg.rule == BLANDS) {
-				
+				if (min_sub == -1 || dict->col_labels[index] < min_sub) {
+					e_and_l[0]	= index;
+					min_sub		= dict->col_labels[index];
+				}
 			} else {
 				e_and_l[0] = index;
 				break;
@@ -608,18 +634,26 @@ void select_entering_and_leaving(dictionary* dict, int* e_and_l) {
 		flip			= TRUE;
 		
 	} else {
-		max_constraint	= 0;
+		printf("BAF 0\n");
+		max_constraint	= INFINITY;
 		flip			= FALSE;
 	}
+	
+	printf("BAF 1: %f\n", max_constraint);
 	
 	for (index = 0; index < dict->num_cons; ++index) {
 		tmp = dictionary_var_can_leave(dict, e_and_l[0], index);
 		
-		// Found a new, more constraining, choice.
-		if (tmp != -1 && tmp < max_constraint) {
-			max_constraint	= tmp;
-			e_and_l[1]	= index;
-			flip			= FALSE;
+		if (tmp != -1) {
+			// Found a new, more constraining, choice.
+			if (tmp < max_constraint || (tmp == max_constraint && dict->row_labels[index] < min_sub)) {
+				printf("BAF 2: %d - %f\n", index, tmp);
+				
+				max_constraint	= tmp;
+				e_and_l[1]	= index;
+				flip			= FALSE;
+				min_sub		= dict->row_labels[index];
+			}
 		}
 	}
 	

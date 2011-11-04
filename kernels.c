@@ -6,6 +6,8 @@
  * Description:	Kernels for different methods of solving LPs.
  */
 
+#include <stdio.h>
+
 // Project Includes
 #include "dictionary.h"
 #include "kernels.h"
@@ -15,8 +17,9 @@
 void pivot_kernel(dictionary* dict) {
 	int e_and_l[2];
 	
-	while (!dictionary_is_final(dict)) {
+	//~while (!dictionary_is_final(dict)) {
 		select_entering_and_leaving(dict, e_and_l);
+		printf("BAR - Entering: %d Leaving: %d\n", e_and_l[0], e_and_l[1]);
 		
 		/*
 		 * If the leaving variable is -1 we need to swap the bounds on the
@@ -29,5 +32,5 @@ void pivot_kernel(dictionary* dict) {
 		} else {
 			dictionary_pivot(dict, e_and_l[0], e_and_l[1]);
 		}
-	}
+	//~}
 }

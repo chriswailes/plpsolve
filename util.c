@@ -67,10 +67,11 @@ void get_config(int argc, char** argv) {
 			cfg.mathprog_filename = argv[index + 1];
 			++index;
 		} else if (check_option(argv[index], "--rule", "-r")) {
-			if (strcmp(argv[index + 1], "blands")) {
+			if (!strcmp(argv[index + 1], "blands")) {
+				printf("FOOBAR!\n");
 				cfg.rule = BLANDS;
 				
-			} else if (strcmp(argv[index + 1], "profy")) {
+			} else if (!strcmp(argv[index + 1], "profy")) {
 				cfg.rule = PROFY;
 			}
 			
