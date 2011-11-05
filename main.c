@@ -36,32 +36,32 @@ int main(int argc, char** argv) {
 	load_lp_file(&dict);
 	
 	num_orig_vars = dict.num_vars;
-
-	if (cfg.verbose) {
-		dictionary_view(&dict);
-	}
 	
 	if (cfg.mathprog_filename) {
 		write_lp_mathprog(&dict, cfg.mathprog_filename);
 		exit(0);
 	}
 
+	if (cfg.verbose) {
+		dictionary_view(&dict);
+	}
+
 	// Initialize the dictionary proper.
 	dictionary_init(&dict);
 	
-	switch (cfg.method) {
-		case PIVOT:
-		default:
-			pivot_kernel(&dict);
-			break;
-	}
+	//~switch (cfg.method) {
+		//~case PIVOT:
+		//~default:
+			//~pivot_kernel(&dict);
+			//~break;
+	//~}
+	//~
+	//~if (cfg.verbose) {
+		//~printf("Final Dictionary:\n");
+		//~dictionary_view(&dict);
+	//~}
 	
-	if (cfg.verbose) {
-		printf("Final Dictionary:\n");
-		dictionary_view(&dict);
-	}
-	
-	dictionary_view_answer(&dict, num_orig_vars);
+	//~dictionary_view_answer(&dict, num_orig_vars);
 
 	dictionary_free(&dict);
 	return 0;

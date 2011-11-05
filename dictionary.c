@@ -135,11 +135,10 @@ void dictionary_init(dictionary* dict) {
 		}
 
 		dictionary_view(dict);
-		printf("FOO\n");
 		pivot_kernel(dict);
-		printf("[[[[[After init pivot:]]]]]\n");
-
-		dictionary_view(dict);
+		//~printf("[[[[[After init pivot:]]]]]\n");
+//~
+		//~dictionary_view(dict);
 
 
 		//dictionary_resize(dict, old_num_vars, old_num_cons);
@@ -157,8 +156,8 @@ void dictionary_init(dictionary* dict) {
 				dict->con_bounds.upper[i] = 0;
 			}
 		}
-		printf("Resetting to original objective\n");
-		dictionary_view(dict);
+		//~printf("Resetting to original objective\n");
+		//~dictionary_view(dict);
 	}
 	else {
 		// dictionary is feasible, return
@@ -469,17 +468,18 @@ void dictionary_var_can_leave(dictionary* dict, clr_t* result, int col_index, in
 	 * Calculate the amount this leaving variable choice constrains the
 	 * entering variable's value.
 	 */
-	if (dict->con_bounds.lower[row_index] < accum && t_coef < 0) {
+	if (dict->con_bounds.lower[row_index] <= accum && t_coef < 0) {
 		result->viable		= GOOD;
 		result->constraint	= (dict->con_bounds.lower[row_index] - accum) / t_coef;
 		result->new_rest	= LOWER;
 		
-	} else if (accum < dict->con_bounds.upper[row_index] && t_coef > 0) {
+	} else if (accum <= dict->con_bounds.upper[row_index] && t_coef > 0) {
 		result->viable		= GOOD;
 		result->constraint	= (dict->con_bounds.upper[row_index] - accum) / t_coef;
 		result->new_rest	= UPPER;
 		
 	} else {
+		//~printf("Non-viable leaving variable with coefficient of %f\n", t_coef);
 		result->viable = NOPE;
 	}
 }
@@ -623,12 +623,12 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 	
 	// Select the entering variable.
 	for (index = 0; index < dict->num_vars; ++index) {
-		//~printf("Checking for entering variable at index %d\n", index);
-		//~printf("var_can_enter returned %d\n", dictionary_var_can_enter(dict, index));
+		printf("Variable x%d can enter: %s\n", dict->col_labels[index], dictionary_var_can_enter(dict, index) != NOPE ? "yes" : "no");
 		
 		if (dictionary_var_can_enter(dict, index) != NOPE) {
 			if (cfg.rule == BLANDS) {
 				if (dict->col_labels[index] < min_sub) {
+					printf("Selecting x%d due to Bland's Rule\n", dict->col_labels[index]);
 					result->entering	= index;
 					min_sub			= dict->col_labels[index];
 				}
@@ -664,10 +664,14 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 	for (index = 0; index < dict->num_cons; ++index) {
 		dictionary_var_can_leave(dict, &cl_result, result->entering, index);
 		
+		printf("Leaving variable: x%d Viable: %-3s Constraint: %f\n", dict->row_labels[index], cl_result.viable != NOPE ? "yes" : "no", cl_result.constraint);
+		
 		if (cl_result.viable) {
 			// Found a new, more constraining, choice.
 			if (cl_result.constraint < max_constraint ||
 				(cfg.rule == BLANDS && (cl_result.constraint == max_constraint && dict->row_labels[index] < min_sub))) {
+				
+				printf("Selecting x%d\n", dict->row_labels[index]);
 				
 				max_constraint		= cl_result.constraint;
 				min_sub			= dict->row_labels[index];
@@ -678,4 +682,6 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 			}
 		}
 	}
+	
+	printf("Flip: %-5s Entering: x%d Leaving: x%d\n", result->flip ? "TRUE" : "FALSE", dict->col_labels[result->entering], dict->row_labels[result->leaving]);
 }

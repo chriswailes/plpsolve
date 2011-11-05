@@ -69,7 +69,6 @@ void get_config(int argc, char** argv) {
 			++index;
 		} else if (check_option(argv[index], "--rule", "-r")) {
 			if (!strcmp(argv[index + 1], "blands")) {
-				printf("FOOBAR!\n");
 				cfg.rule = BLANDS;
 				
 			} else if (!strcmp(argv[index + 1], "profy")) {

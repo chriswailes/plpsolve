@@ -19,8 +19,8 @@ typedef enum {
 
 typedef enum {
 	NOPE = 0,
-	GOOD,
-	BAD
+	BAD,
+	GOOD
 } viable_t;
 
 typedef struct {
