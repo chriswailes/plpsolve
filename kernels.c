@@ -22,12 +22,12 @@ void pivot_kernel(dictionary* dict) {
 	unsigned int iters = 0;
 	elr_t el_result;
 	
-	printf("\n\n");
-	printf("START OF SIMPLEX!!!\n");
+	//~printf("\n\n");
+	//~printf("START OF SIMPLEX!!!\n");
 	
 	//~while (!dictionary_is_final(dict)) {
 	while (iters < 8) {
-		printf("Iteration %d\n", iters);
+		//~printf("Iteration %d\n", iters);
 		
 		select_entering_and_leaving(dict, &el_result);
 		
@@ -38,7 +38,7 @@ void pivot_kernel(dictionary* dict) {
 			dictionary_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest);
 		}
 		
-		dictionary_view(dict);
+		//~dictionary_view(dict);
 		
 		++iters;
 	}

@@ -49,19 +49,19 @@ int main(int argc, char** argv) {
 	// Initialize the dictionary proper.
 	dictionary_init(&dict);
 	
-	//~switch (cfg.method) {
-		//~case PIVOT:
-		//~default:
-			//~pivot_kernel(&dict);
-			//~break;
-	//~}
-	//~
-	//~if (cfg.verbose) {
-		//~printf("Final Dictionary:\n");
-		//~dictionary_view(&dict);
-	//~}
+	switch (cfg.method) {
+		case PIVOT:
+		default:
+			pivot_kernel(&dict);
+			break;
+	}
 	
-	//~dictionary_view_answer(&dict, num_orig_vars);
+	if (cfg.verbose) {
+		printf("Final Dictionary:\n");
+		dictionary_view(&dict);
+	}
+	
+	dictionary_view_answer(&dict, num_orig_vars);
 
 	dictionary_free(&dict);
 	return 0;

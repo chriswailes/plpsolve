@@ -96,7 +96,7 @@ void dictionary_init(dictionary* dict) {
 	int pre_resize_num_vars = dict->num_vars;
 	dictionary_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
 	dictionary_populate_split_vars(dict, pre_resize_num_vars);
-
+	
 	infeasible_set_t infeasible = dictionary_infeasible_rows(dict);
 	
 	if (infeasible.num_infeasible_rows) {
@@ -136,14 +136,14 @@ void dictionary_init(dictionary* dict) {
 
 		dictionary_view(dict);
 		pivot_kernel(dict);
-		//~printf("[[[[[After init pivot:]]]]]\n");
-//~
-		//~dictionary_view(dict);
+		printf("[[[[[After init pivot:]]]]]\n");
+
+		dictionary_view(dict);
 
 
-		//dictionary_resize(dict, old_num_vars, old_num_cons);
+		dictionary_resize(dict, old_num_vars, old_num_cons);
 		memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
-		//dict->objective = old_objective;
+		dict->objective = old_objective;
 		for (i = 0; i < dict->num_vars; ++i) {
 			if (dict->col_labels[i] > (old_num_vars + old_num_cons)) {
 				dict->var_bounds.lower[i] = 0;
@@ -156,8 +156,8 @@ void dictionary_init(dictionary* dict) {
 				dict->con_bounds.upper[i] = 0;
 			}
 		}
-		//~printf("Resetting to original objective\n");
-		//~dictionary_view(dict);
+		printf("Resetting to original objective\n");
+		dictionary_view(dict);
 	}
 	else {
 		// dictionary is feasible, return
@@ -313,7 +313,7 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index, rest_t new
 
 void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
 	int next_split_var = starting_split_var;
-
+	
 	int i;
 	for (i = 0; i < starting_split_var; ++i) {
 		if (is_unbounded_var_at_index(dict, i)) {
@@ -349,7 +349,11 @@ void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
 void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons) {
 	//In case we want to snapshot the previous pointers, don't realloc them.
 	//Instead, just create a new dictionary and replace the pointers.
-
+	
+	if (new_num_vars == dict->num_vars && new_num_cons == dict->num_cons) {
+		return;
+	}
+	
 	double *new_objective = malloc(sizeof(double) * new_num_vars);
 	memset(new_objective, 0, sizeof(double) * new_num_vars);
 	memcpy(new_objective, dict->objective, sizeof(double) * min_int(new_num_vars, dict->num_vars));
@@ -551,7 +555,7 @@ void dictionary_view(const dictionary* dict) {
 double dictionary_get_var_value(const dictionary* dict, int var) {
 	int j, k;
 	double var_total = 0.0;
-
+	
 	for (j = 0; j < dict->num_vars; ++j) {
 		if (dict->col_labels[j] == var) {
 			if (dict->var_rests[j] == LOWER) {
@@ -586,6 +590,7 @@ double dictionary_get_var_value(const dictionary* dict, int var) {
 			return var_total;
 		}
 	}
+	
 	fprintf(stderr, "Unknown variable request: x%d\n", var);
 	exit(-1);
 }
@@ -636,12 +641,12 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 	
 	// Select the entering variable.
 	for (index = 0; index < dict->num_vars; ++index) {
-		printf("Variable x%d can enter: %s\n", dict->col_labels[index], dictionary_var_can_enter(dict, index) != NOPE ? "yes" : "no");
+		//~printf("Variable x%d can enter: %s\n", dict->col_labels[index], dictionary_var_can_enter(dict, index) != NOPE ? "yes" : "no");
 		
 		if (dictionary_var_can_enter(dict, index) != NOPE) {
 			if (cfg.rule == BLANDS) {
 				if (dict->col_labels[index] < min_sub) {
-					printf("Selecting x%d due to Bland's Rule\n", dict->col_labels[index]);
+					//~printf("Selecting x%d due to Bland's Rule\n", dict->col_labels[index]);
 					result->entering	= index;
 					min_sub			= dict->col_labels[index];
 				}
@@ -677,14 +682,14 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 	for (index = 0; index < dict->num_cons; ++index) {
 		dictionary_var_can_leave(dict, &cl_result, result->entering, index);
 		
-		printf("Leaving variable: x%d Viable: %-3s Constraint: %f\n", dict->row_labels[index], cl_result.viable != NOPE ? "yes" : "no", cl_result.constraint);
+		//~printf("Leaving variable: x%d Viable: %-3s Constraint: %f\n", dict->row_labels[index], cl_result.viable != NOPE ? "yes" : "no", cl_result.constraint);
 		
 		if (cl_result.viable) {
 			// Found a new, more constraining, choice.
 			if (cl_result.constraint < max_constraint ||
 				(cfg.rule == BLANDS && (cl_result.constraint == max_constraint && dict->row_labels[index] < min_sub))) {
 				
-				printf("Selecting x%d\n", dict->row_labels[index]);
+				//~printf("Selecting x%d\n", dict->row_labels[index]);
 				
 				max_constraint		= cl_result.constraint;
 				min_sub			= dict->row_labels[index];
@@ -696,5 +701,5 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 		}
 	}
 	
-	printf("Flip: %-5s Entering: x%d Leaving: x%d\n", result->flip ? "TRUE" : "FALSE", dict->col_labels[result->entering], dict->row_labels[result->leaving]);
+	//~printf("Flip: %-5s Entering: x%d Leaving: x%d\n", result->flip ? "TRUE" : "FALSE", dict->col_labels[result->entering], dict->row_labels[result->leaving]);
 }
