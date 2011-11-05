@@ -1,0 +1,14 @@
+Linear Programming Assignment #1
+Jonathan Turner and Chris Wailes
+
+Our solver for this assignment is built with (we hope) a modular style of C, so that we can extend it further 
+with optimizations that relate to our final project for the class.  For Jonathan, this is a OpenCL-based solver 
+for LP.  For Chris, this is likely an OpenMPI-based solution.  To wit, we wanted to make sure that the solution 
+was well-engineered using good C best practices and did not attempt to optimize the path to the solution.
+
+We implemented general form initialization and simplex for this project.  Chris took the simplex duties, while 
+Jonathan implemented initialization, file parsing, and mathprog output (for debugging).  
+
+Along with our source, we're submitting a small set of unit tests which we hope to grow over the coming weeks as 
+we begin to optimize the codebase further.  These unit tests cover initialization variables, variable splitting 
+of free variables, and of course, simplex itself.

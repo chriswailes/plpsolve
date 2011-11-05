@@ -329,12 +329,12 @@ void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
 					dict->matrix[j * dict->num_vars + next_split_var] =
 						dict->matrix[j * dict->num_vars + i];
 			}
-			dict->var_bounds.upper[next_split_var] = 0;
-			dict->var_bounds.lower[next_split_var] = -INFINITY;
+			dict->var_bounds.upper[next_split_var] = INFINITY;
+			dict->var_bounds.lower[next_split_var] = 0;
 			dict->var_bounds.upper[i] = INFINITY;
 			dict->var_bounds.lower[i] = 0;
 
-			dict->var_rests[next_split_var] = UPPER;
+			dict->var_rests[next_split_var] = LOWER;
 			dict->var_rests[i] = LOWER;
 
 			dict->objective[next_split_var] = -dict->objective[i];
@@ -561,7 +561,7 @@ double dictionary_get_var_value(const dictionary* dict, int var) {
 			}
 
 			if (dict->split_vars[var]) {
-				var_total += dictionary_get_var_value(dict, dict->split_vars[var]);
+				var_total -= dictionary_get_var_value(dict, dict->split_vars[var]);
 			}
 
 			return var_total;
@@ -580,7 +580,7 @@ double dictionary_get_var_value(const dictionary* dict, int var) {
 			}
 
 			if (dict->split_vars[var]) {
-				var_total += dictionary_get_var_value(dict, dict->split_vars[var]);
+				var_total -= dictionary_get_var_value(dict, dict->split_vars[var]);
 			}
 
 			return var_total;
