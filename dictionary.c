@@ -328,12 +328,12 @@ void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
 					dict->matrix[j * dict->num_vars + next_split_var] =
 						dict->matrix[j * dict->num_vars + i];
 			}
-			dict->var_bounds.upper[next_split_var] = 0;
-			dict->var_bounds.lower[next_split_var] = -INFINITY;
+			dict->var_bounds.upper[next_split_var] = INFINITY;
+			dict->var_bounds.lower[next_split_var] = 0;
 			dict->var_bounds.upper[i] = INFINITY;
 			dict->var_bounds.lower[i] = 0;
 
-			dict->var_rests[next_split_var] = UPPER;
+			dict->var_rests[next_split_var] = LOWER;
 			dict->var_rests[i] = LOWER;
 
 			dict->objective[next_split_var] = -dict->objective[i];
@@ -548,11 +548,51 @@ void dictionary_view(const dictionary* dict) {
 	printf("\n\n");
 }
 
+double dictionary_get_var_value(const dictionary* dict, int var) {
+	int j, k;
+	double var_total = 0.0;
+
+	for (j = 0; j < dict->num_vars; ++j) {
+		if (dict->col_labels[j] == var) {
+			if (dict->var_rests[j] == LOWER) {
+				var_total = dict->var_bounds.lower[j];
+			} else {
+				var_total = dict->var_bounds.upper[j];
+			}
+
+			if (dict->split_vars[var]) {
+				var_total -= dictionary_get_var_value(dict, dict->split_vars[var]);
+			}
+
+			return var_total;
+		}
+	}
+
+	for (j = 0; j < dict->num_cons; ++j) {
+		if (dict->row_labels[j] == var) {
+
+			for (k = 0; k < dict->num_vars; ++k) {
+				if (dict->var_rests[k] == LOWER) {
+					var_total += dict->var_bounds.lower[k] * dict->matrix[j * dict->num_vars + k];
+				} else {
+					var_total += dict->var_bounds.upper[k] * dict->matrix[j * dict->num_vars + k];
+				}
+			}
+
+			if (dict->split_vars[var]) {
+				var_total -= dictionary_get_var_value(dict, dict->split_vars[var]);
+			}
+
+			return var_total;
+		}
+	}
+	fprintf(stderr, "Unknown variable request: x%d\n", var);
+	exit(-1);
+}
+
 void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
-	int i, j, k;
-	double objective = 0.0, var_total = 0.0;
-	
-	bool is_done = FALSE;
+	int i;
+	double objective = 0.0;
 	
 	for (i = 0; i < dict->num_vars; ++i) {
 		if (dict->var_rests[i] == LOWER) {
@@ -565,34 +605,7 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 	printf("Objective: %f\n", objective);
 
 	for (i = 1; i <= num_orig_vars; ++i) {
-		is_done = FALSE;
-		for (j = 0; j < dict->num_vars; ++j) {
-			if (dict->col_labels[j] == i) {
-				if (dict->var_rests[j] == LOWER) {
-					printf("x%i = %f\n", i, dict->var_bounds.lower[j]);
-				} else {
-					printf("x%i = %f\n", i, dict->var_bounds.upper[j]);
-				}
-				is_done = TRUE;
-			}
-		}
-		
-		if (!is_done) {
-			for (j = 0; j < dict->num_cons; ++j) {
-				if (dict->row_labels[j] == i) {
-					var_total = 0.0;
-
-					for (k = 0; k < dict->num_vars; ++k) {
-						if (dict->var_rests[k] == LOWER) {
-							var_total += dict->var_bounds.lower[k] * dict->matrix[j * dict->num_vars + k];
-						} else {
-							var_total += dict->var_bounds.upper[k] * dict->matrix[j * dict->num_vars + k];
-						}
-					}
-					printf("x%i = %f\n", i, var_total);
-				}
-			}
-		}
+		printf("x%i = %f\n", i, dictionary_get_var_value(dict, i));
 	}
 }
 
