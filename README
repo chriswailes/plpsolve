@@ -12,3 +12,14 @@ Jonathan implemented initialization, file parsing, and mathprog output (for debu
 Along with our source, we're submitting a small set of unit tests which we hope to grow over the coming weeks as 
 we begin to optimize the codebase further.  These unit tests cover initialization variables, variable splitting 
 of free variables, and of course, simplex itself.
+
+The test files tests/test(2-4).lp are all solved correctly by our solver.
+
+###########
+# Caveats #
+###########
+
+We encountered numerical problems with one, possibly two, of our test cases.  Floating point errors caused a value
+that should have been zero to be a very small number, therefor causing errors when selecting leaving variables for
+tests/test5.lp.  This same problem is suspected as the culprit in the non-termination of the second test case
+(tests/test1.lp).
