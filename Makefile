@@ -10,7 +10,7 @@ LFLAGS	=
 
 PROGRAM	= superlp
 
-SOURCE	= dictionary.c input.c kernels.c main.c util.c
+SOURCE	= dictionary.c input.c kernels.c main.c matrix.c output.c util.c
 EXECS	= superlp
 
 all: $(EXECS)
