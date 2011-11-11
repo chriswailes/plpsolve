@@ -46,6 +46,5 @@ typedef struct {
 } config;
 
 void get_config(int argc, char** argv);
-inline int min_int(int left, int right);
 
 #endif

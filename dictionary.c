@@ -356,22 +356,22 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 	
 	double *new_objective = malloc(sizeof(double) * new_num_vars);
 	memset(new_objective, 0, sizeof(double) * new_num_vars);
-	memcpy(new_objective, dict->objective, sizeof(double) * min_int(new_num_vars, dict->num_vars));
+	memcpy(new_objective, dict->objective, sizeof(double) * MIN(new_num_vars, dict->num_vars));
 	dict->objective = new_objective;
 
 	int *new_col_labels = malloc(sizeof(int) * new_num_vars);
 	memset(new_col_labels, 0, sizeof(int) * new_num_vars);
-	memcpy(new_col_labels, dict->col_labels, sizeof(int) * min_int(new_num_vars, dict->num_vars));
+	memcpy(new_col_labels, dict->col_labels, sizeof(int) * MIN(new_num_vars, dict->num_vars));
 	dict->col_labels = new_col_labels;
 
 	rest_t* new_var_rests = malloc(sizeof(rest_t) * new_num_vars);
 	memset(new_var_rests, 0, sizeof(rest_t) * new_num_vars);
-	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * min_int(new_num_vars, dict->num_vars));
+	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * MIN(new_num_vars, dict->num_vars));
 	dict->var_rests = new_var_rests;
 
 	int *new_split_vars = malloc(sizeof(int) * new_num_vars);
 	memset(new_split_vars, 0, sizeof(int) * new_num_vars);
-	memcpy(new_split_vars, dict->split_vars, sizeof(int) * min_int(new_num_vars, dict->num_vars));
+	memcpy(new_split_vars, dict->split_vars, sizeof(int) * MIN(new_num_vars, dict->num_vars));
 	dict->split_vars = new_split_vars;
 
 	bounds_t new_var_bounds;
@@ -382,14 +382,14 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 	memset(new_var_bounds.upper, 0, (sizeof(double) * new_num_vars));
 
 	memcpy(new_var_bounds.lower, dict->var_bounds.lower, sizeof(double) *
-			min_int(new_num_vars, dict->num_vars));
+			MIN(new_num_vars, dict->num_vars));
 	memcpy(new_var_bounds.upper, dict->var_bounds.upper, sizeof(double) *
-			min_int(new_num_vars, dict->num_vars));
+			MIN(new_num_vars, dict->num_vars));
 	dict->var_bounds = new_var_bounds;
 
 	int *new_row_labels = malloc(sizeof(int) * new_num_cons);
 	memset(new_row_labels, 0, (sizeof(int) * new_num_cons));
-	memcpy(new_row_labels, dict->row_labels, sizeof(int) * min_int(new_num_cons, dict->num_cons));
+	memcpy(new_row_labels, dict->row_labels, sizeof(int) * MIN(new_num_cons, dict->num_cons));
 	dict->row_labels = new_row_labels;
 
 	bounds_t new_con_bounds;
@@ -400,18 +400,18 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 	memset(new_con_bounds.upper, 0, (sizeof(double) * new_num_cons));
 
 	memcpy(new_con_bounds.lower, dict->con_bounds.lower, sizeof(double) *
-			min_int(new_num_cons, dict->num_cons));
+			MIN(new_num_cons, dict->num_cons));
 	memcpy(new_con_bounds.upper, dict->con_bounds.upper, sizeof(double) *
-			min_int(new_num_cons, dict->num_cons));
+			MIN(new_num_cons, dict->num_cons));
 	dict->con_bounds = new_con_bounds;
 
 	double* new_matrix = malloc(sizeof(double) * new_num_vars * new_num_cons);
 	memset (new_matrix, 0, sizeof(double) * new_num_vars * new_num_cons);
 
 	int i;
-	for (i = 0; i < min_int(dict->num_cons, new_num_cons); ++i) {
+	for (i = 0; i < MIN(dict->num_cons, new_num_cons); ++i) {
 		memcpy(new_matrix + i * new_num_vars, dict->matrix + i * dict->num_vars,
-				sizeof(double) * min_int(new_num_vars, dict->num_vars));
+				sizeof(double) * MIN(new_num_vars, dict->num_vars));
 	}
 
 	dict->matrix = new_matrix;
