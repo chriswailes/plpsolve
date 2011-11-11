@@ -9,6 +9,6 @@
 #ifndef KERNELS_H
 #define KERNELS_H
 
-void general_simplex_kernel(dictionary* dict);
+void general_simplex_kernel(dict_t* dict);
 
 #endif

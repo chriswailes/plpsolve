@@ -13,7 +13,7 @@
 // Project Includes
 #include "dictionary.h"
 
-void output_glpsol(dictionary* dict, const char* filename) {
+void output_glpsol(dict_t* dict, const char* filename) {
 	int i, j, current_constraint;
 	FILE* out = fopen(filename, "wt");
 	

@@ -10,6 +10,7 @@
 #define DICTIONARY_H
 
 // Project Includes
+#include "matrix.h"
 #include "util.h"
 
 typedef enum {
@@ -79,23 +80,23 @@ typedef struct {
 	bounds_t var_bounds;
 	
 	rest_t* var_rests;
-} dictionary;
+} dict_t;
 
-bool is_unbounded_var_at_index(dictionary *dict, int index);
-void select_entering_and_leaving(dictionary* dict, elr_t* result);
+bool is_unbounded_var_at_index(dict_t *dict, int index);
+void select_entering_and_leaving(dict_t* dict, elr_t* result);
 
-void				dictionary_free(dictionary* dict);
-infeasible_set_t	dictionary_infeasible_rows(dictionary *dict);
-void				dictionary_init(dictionary* dict);
-void				dictionary_init_struct(dictionary* dict);
-bool				dictionary_is_final(dictionary* dict);
-unsigned			dictionary_get_num_unbounded_vars(dictionary *dict);
-void				dictionary_pivot(dictionary* dict, int col_index, int row_index, rest_t new_rest);
-void				dictionary_populate_split_vars(dictionary* dict, int starting_split_var);
-void				dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons);
-viable_t			dictionary_var_can_enter(dictionary* dict, int col_index);
-void				dictionary_var_can_leave(dictionary* dict, clr_t* result, int col_index, int row_index);
-void				dictionary_view(const dictionary* dict);
-void				dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars);
+void				dict_free(dict_t* dict);
+infeasible_set_t	dict_infeasible_rows(dict_t *dict);
+void				dict_init(dict_t* dict);
+bool				dict_is_final(dict_t* dict);
+unsigned			dict_get_num_unbounded_vars(dict_t *dict);
+void				dict_new(dict_t* dict);
+void				dict_pivot(dict_t* dict, int col_index, int row_index, rest_t new_rest);
+void				dict_populate_split_vars(dict_t* dict, int starting_split_var);
+void				dict_resize(dict_t* dict, unsigned new_num_vars, unsigned new_num_cons);
+viable_t			dict_var_can_enter(dict_t* dict, int col_index);
+void				dict_var_can_leave(dict_t* dict, clr_t* result, int col_index, int row_index);
+void				dict_view(const dict_t* dict);
+void				dict_view_answer(const dict_t* dict, unsigned num_orig_vars);
 
 #endif

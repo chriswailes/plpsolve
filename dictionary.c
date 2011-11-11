@@ -24,7 +24,7 @@ extern config_t cfg;
 
 // Functions
 
-void dictionary_free(dictionary* dict) {
+void dict_free(dict_t* dict) {
 	free(dict->objective);
 	free(dict->matrix);
 	
@@ -39,7 +39,7 @@ void dictionary_free(dictionary* dict) {
 	free(dict->var_rests);
 }
 
-infeasible_set_t dictionary_infeasible_rows(dictionary *dict) {
+infeasible_set_t dict_infeasible_rows(dict_t* dict) {
 	//This can be done a little less naively, but do it naively for now
 	int i, j;
 	infeasible_set_t infeasible_set;
@@ -88,16 +88,16 @@ infeasible_set_t dictionary_infeasible_rows(dictionary *dict) {
 	return infeasible_set;
 }
 
-void dictionary_init(dictionary* dict) {
-	unsigned num_unbounded_vars = dictionary_get_num_unbounded_vars(dict);
+void dict_init(dict_t* dict) {
+	unsigned num_unbounded_vars = dict_get_num_unbounded_vars(dict);
 
-	dictionary_view(dict);
+	dict_view(dict);
 
 	int pre_resize_num_vars = dict->num_vars;
-	dictionary_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
-	dictionary_populate_split_vars(dict, pre_resize_num_vars);
+	dict_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
+	dict_populate_split_vars(dict, pre_resize_num_vars);
 	
-	infeasible_set_t infeasible = dictionary_infeasible_rows(dict);
+	infeasible_set_t infeasible = dict_infeasible_rows(dict);
 	
 	if (infeasible.num_infeasible_rows) {
 		// perform initialization
@@ -111,7 +111,7 @@ void dictionary_init(dictionary* dict) {
 			printf("  row: %i by %f\n", infeasible.infeasible_rows[i].infeasible_row,
 					infeasible.infeasible_rows[i].infeasible_amount);
 		}
-		dictionary_resize(dict, dict->num_vars + infeasible.num_infeasible_rows,
+		dict_resize(dict, dict->num_vars + infeasible.num_infeasible_rows,
 				dict->num_cons);
 
 		for (i = 0; i < old_num_vars; ++i) {
@@ -134,14 +134,14 @@ void dictionary_init(dictionary* dict) {
 			}
 		}
 
-		dictionary_view(dict);
+		dict_view(dict);
 		general_simplex_kernel(dict);
 		printf("[[[[[After init pivot:]]]]]\n");
 
-		dictionary_view(dict);
+		dict_view(dict);
 
 
-		dictionary_resize(dict, old_num_vars, old_num_cons);
+		dict_resize(dict, old_num_vars, old_num_cons);
 		memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
 		dict->objective = old_objective;
 		for (i = 0; i < dict->num_vars; ++i) {
@@ -157,15 +157,37 @@ void dictionary_init(dictionary* dict) {
 			}
 		}
 		printf("Resetting to original objective\n");
-		dictionary_view(dict);
+		dict_view(dict);
 	}
 	else {
-		// dictionary is feasible, return
+		// Dictionary is feasible; return.
 		return;
 	}
 }
 
-void dictionary_init_struct(dictionary* dict) {
+bool dict_is_final(dict_t* dict) {
+	int index;
+	
+	for (index = 0; index < dict->num_vars; ++index) {
+		if ((dict->objective[index] < 0 && dict->var_rests[index] == UPPER) || (dict->objective[index] > 0 && dict->var_rests[index] == LOWER)) {
+			return FALSE;
+		}
+	}
+	
+	return TRUE;
+}
+
+unsigned dict_get_num_unbounded_vars(dict_t* dict) {
+	int i;
+	unsigned num_unbounded_vars = 0;
+	for (i = 0; i < dict->num_vars; ++i) {
+		if (is_unbounded_var_at_index(dict, i))
+			++num_unbounded_vars;
+	}
+	return num_unbounded_vars;
+}
+
+void dict_new(dict_t* dict) {
 	int index;
 	
 	/*
@@ -199,28 +221,6 @@ void dictionary_init_struct(dictionary* dict) {
 	}
 }
 
-bool dictionary_is_final(dictionary* dict) {
-	int index;
-	
-	for (index = 0; index < dict->num_vars; ++index) {
-		if ((dict->objective[index] < 0 && dict->var_rests[index] == UPPER) || (dict->objective[index] > 0 && dict->var_rests[index] == LOWER)) {
-			return FALSE;
-		}
-	}
-	
-	return TRUE;
-}
-
-unsigned dictionary_get_num_unbounded_vars(dictionary *dict) {
-	int i;
-	unsigned num_unbounded_vars = 0;
-	for (i = 0; i < dict->num_vars; ++i) {
-		if (is_unbounded_var_at_index(dict, i))
-			++num_unbounded_vars;
-	}
-	return num_unbounded_vars;
-}
-
 /*
  * Pivots a dictionary around the given column and row.
  * 
@@ -236,7 +236,7 @@ unsigned dictionary_get_num_unbounded_vars(dictionary *dict) {
  * Then to (3):
  * 	xn = (c1/-cj)*x1 + (c2/-cj)*x2 + (1/-cj)*xm + ... + (cn/-cj)*xn
  */
-void dictionary_pivot(dictionary* dict, int col_index, int row_index, rest_t new_rest) {
+void dict_pivot(dict_t* dict, int col_index, int row_index, rest_t new_rest) {
 	int index0, index1;
 	
 	double  coefficient, swap;
@@ -311,7 +311,7 @@ void dictionary_pivot(dictionary* dict, int col_index, int row_index, rest_t new
 	free(tmp_row);
 }
 
-void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
+void dict_populate_split_vars(dict_t* dict, int starting_split_var) {
 	int next_split_var = starting_split_var;
 	
 	int i;
@@ -346,7 +346,7 @@ void dictionary_populate_split_vars(dictionary* dict, int starting_split_var) {
 	}
 }
 
-void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num_cons) {
+void dict_resize(dict_t* dict, unsigned new_num_vars, unsigned new_num_cons) {
 	//In case we want to snapshot the previous pointers, don't realloc them.
 	//Instead, just create a new dictionary and replace the pointers.
 	
@@ -423,7 +423,7 @@ void dictionary_resize(dictionary* dict, unsigned new_num_vars, unsigned new_num
 /*
  * Return should be Good, Bad, and Nope
  */
-viable_t dictionary_var_can_enter(dictionary* dict, int col_index) {
+viable_t dict_var_can_enter(dict_t* dict, int col_index) {
 	//~printf("Objective: %f Lower: %f Upper: %f\n", dict->objective[col_index], dict->var_bounds.lower[col_index], dict->var_bounds.upper[col_index]);
 	
 	if (dict->objective[col_index] == 0) {
@@ -444,7 +444,7 @@ viable_t dictionary_var_can_enter(dictionary* dict, int col_index) {
  * can leave when a given variable (referenced by the corresponding column in
  * the matrix) is entering.
  */
-void dictionary_var_can_leave(dictionary* dict, clr_t* result, int col_index, int row_index) {
+void dict_var_can_leave(dict_t* dict, clr_t* result, int col_index, int row_index) {
 	int index;
 	double accum = 0;
 	double t_coef;
@@ -488,7 +488,7 @@ void dictionary_var_can_leave(dictionary* dict, clr_t* result, int col_index, in
 	}
 }
 
-void dictionary_view(const dictionary* dict) {
+void dict_view(const dict_t* dict) {
 	unsigned int i, j;
 	char buffer[10];
 	
@@ -552,7 +552,7 @@ void dictionary_view(const dictionary* dict) {
 	printf("\n\n");
 }
 
-double dictionary_get_var_value(const dictionary* dict, int var) {
+double dict_get_var_value(const dict_t* dict, int var) {
 	int j, k;
 	double var_total = 0.0;
 	
@@ -565,7 +565,7 @@ double dictionary_get_var_value(const dictionary* dict, int var) {
 			}
 
 			if (dict->split_vars[var]) {
-				var_total -= dictionary_get_var_value(dict, dict->split_vars[var]);
+				var_total -= dict_get_var_value(dict, dict->split_vars[var]);
 			}
 
 			return var_total;
@@ -584,7 +584,7 @@ double dictionary_get_var_value(const dictionary* dict, int var) {
 			}
 
 			if (dict->split_vars[var]) {
-				var_total -= dictionary_get_var_value(dict, dict->split_vars[var]);
+				var_total -= dict_get_var_value(dict, dict->split_vars[var]);
 			}
 
 			return var_total;
@@ -595,7 +595,7 @@ double dictionary_get_var_value(const dictionary* dict, int var) {
 	exit(-1);
 }
 
-void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
+void dict_view_answer(const dict_t* dict, unsigned num_orig_vars) {
 	int i;
 	double objective = 0.0;
 	
@@ -610,11 +610,11 @@ void dictionary_view_answer(const dictionary* dict, unsigned num_orig_vars) {
 	printf("Objective: %f\n", objective);
 
 	for (i = 1; i <= num_orig_vars; ++i) {
-		printf("x%i = %f\n", i, dictionary_get_var_value(dict, i));
+		printf("x%i = %f\n", i, dict_get_var_value(dict, i));
 	}
 }
 
-bool is_unbounded_var_at_index(dictionary *dict, int index) {
+bool is_unbounded_var_at_index(dict_t* dict, int index) {
 	/* Not sure if you're technically allowed to check equality with infinity,
 	 * but since we're the ones setting infinity and not trying to create new
 	 * infinities, perhaps this is allowed?
@@ -633,7 +633,7 @@ bool is_unbounded_var_at_index(dictionary *dict, int index) {
  * 	- Implement ProfY's Rule
  * 	- Change so that if no leaving variable is found for an entering variable we try again.
  */
-void select_entering_and_leaving(dictionary* dict, elr_t* result) {
+void select_entering_and_leaving(dict_t* dict, elr_t* result) {
 	int index, min_sub = INT_MAX;
 	double max_constraint;
 	
@@ -641,9 +641,9 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 	
 	// Select the entering variable.
 	for (index = 0; index < dict->num_vars; ++index) {
-		//~printf("Variable x%d can enter: %s\n", dict->col_labels[index], dictionary_var_can_enter(dict, index) != NOPE ? "yes" : "no");
+		//~printf("Variable x%d can enter: %s\n", dict->col_labels[index], dict_var_can_enter(dict, index) != NOPE ? "yes" : "no");
 		
-		if (dictionary_var_can_enter(dict, index) != NOPE) {
+		if (dict_var_can_enter(dict, index) != NOPE) {
 			if (cfg.rule == BLANDS) {
 				if (dict->col_labels[index] < min_sub) {
 					//~printf("Selecting x%d due to Bland's Rule\n", dict->col_labels[index]);
@@ -680,7 +680,7 @@ void select_entering_and_leaving(dictionary* dict, elr_t* result) {
 	}
 	
 	for (index = 0; index < dict->num_cons; ++index) {
-		dictionary_var_can_leave(dict, &cl_result, result->entering, index);
+		dict_var_can_leave(dict, &cl_result, result->entering, index);
 		
 		//~printf("Leaving variable: x%d Viable: %-3s Constraint: %f\n", dict->row_labels[index], cl_result.viable != NOPE ? "yes" : "no", cl_result.constraint);
 		

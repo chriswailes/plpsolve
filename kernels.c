@@ -18,7 +18,7 @@ extern config_t cfg;
 
 // Functions
 
-void general_simplex_kernel(dictionary* dict) {
+void general_simplex_kernel(dict_t* dict) {
 	unsigned int iters = 0;
 	elr_t el_result;
 	
@@ -35,10 +35,10 @@ void general_simplex_kernel(dictionary* dict) {
 			dict->var_rests[el_result.entering] = el_result.new_rest;
 			
 		} else {
-			dictionary_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest);
+			dict_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest);
 		}
 		
-		//~dictionary_view(dict);
+		//~dict_view(dict);
 		
 		++iters;
 	}

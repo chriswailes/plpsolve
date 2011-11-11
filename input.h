@@ -12,11 +12,11 @@
 // Project Includes
 #include "dictionary.h"
 
-void load_lp_file(dictionary* dict);
+void load_lp_file(dict_t* dict);
 
-void load_constraint_bounds(FILE* in, dictionary* dict);
-void load_matrix(FILE* in, dictionary* dict);
-void load_objective(FILE* in, dictionary* dict);
-void load_var_bounds(FILE* in, dictionary* dict);
+void load_constraint_bounds(FILE* in, dict_t* dict);
+void load_matrix(FILE* in, dict_t* dict);
+void load_objective(FILE* in, dict_t* dict);
+void load_var_bounds(FILE* in, dict_t* dict);
 
 #endif

@@ -20,7 +20,7 @@
 
 extern config_t cfg;
 
-void load_lp_file(dictionary* dict) {
+void load_lp_file(dict_t* dict) {
 	int index;
 	FILE* in;
 	
@@ -28,7 +28,7 @@ void load_lp_file(dictionary* dict) {
 		fscanf(in, "%i,%i\n", &dict->num_cons, &dict->num_vars);
 		
 		// Initialize our dictionary struct.
-		dictionary_init_struct(dict);
+		dict_new(dict);
 		
 		// Load values from input file.
 		load_objective(in, dict);
@@ -55,7 +55,7 @@ void load_lp_file(dictionary* dict) {
 	}
 }
 
-void load_constraint_bounds(FILE* in, dictionary* dict) {
+void load_constraint_bounds(FILE* in, dict_t* dict) {
 	unsigned i;
 
 	for (i = 0; i < dict->num_cons; ++i) {
@@ -75,7 +75,7 @@ void load_constraint_bounds(FILE* in, dictionary* dict) {
 	fscanf(in, "\n");
 }
 
-void load_matrix(FILE* in, dictionary* dict) {
+void load_matrix(FILE* in, dict_t* dict) {
 	unsigned i, j;
 	
 	for (j = 0; j < dict->num_cons; ++j) {
@@ -89,7 +89,7 @@ void load_matrix(FILE* in, dictionary* dict) {
 	fscanf(in, "\n");
 }
 
-void load_objective(FILE* in, dictionary* dict) {
+void load_objective(FILE* in, dict_t* dict) {
 	unsigned i;
 	
 	for (i = 0; i < dict->num_vars; ++i) {
@@ -101,7 +101,7 @@ void load_objective(FILE* in, dictionary* dict) {
 	fscanf(in, "\n");
 }
 
-void load_var_bounds(FILE* in, dictionary* dict) {
+void load_var_bounds(FILE* in, dict_t* dict) {
 	unsigned i;
 	
 	for (i = 0; i < dict->num_vars; ++i) {

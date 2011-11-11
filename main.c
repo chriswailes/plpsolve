@@ -25,7 +25,7 @@ config_t cfg;
 // Functions
 
 int main(int argc, char** argv) {
-	dictionary dict;
+	dict_t dict;
 	unsigned int num_orig_vars;
 
 	get_config(argc, argv);
@@ -40,11 +40,11 @@ int main(int argc, char** argv) {
 	}
 
 	if (cfg.verbose) {
-		dictionary_view(&dict);
+		dict_view(&dict);
 	}
 
 	// Initialize the dictionary proper.
-	dictionary_init(&dict);
+	dict_init(&dict);
 	
 	switch (cfg.method) {
 		case GS:
@@ -55,11 +55,11 @@ int main(int argc, char** argv) {
 	
 	if (cfg.verbose) {
 		printf("Final Dictionary:\n");
-		dictionary_view(&dict);
+		dict_view(&dict);
 	}
 	
-	dictionary_view_answer(&dict, num_orig_vars);
+	dict_view_answer(&dict, num_orig_vars);
 
-	dictionary_free(&dict);
+	dict_free(&dict);
 	return 0;
 }

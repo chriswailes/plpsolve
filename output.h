@@ -10,6 +10,6 @@
 #ifndef OUTPUT_H
 #define OUTPUT_H
 
-void output_glpsol(dictionary* dict, const char* filename);
+void output_glpsol(dict_t* dict, const char* filename);
 
 #endif
