@@ -64,9 +64,11 @@ void get_config(int argc, char** argv) {
 			}
 			
 			++index;
+			
 		} else if (check_option(argv[index], "--mathprog", "-m")) {
 			cfg.mathprog_filename = argv[index + 1];
 			++index;
+			
 		} else if (check_option(argv[index], "--rule", "-r")) {
 			if (!strcmp(argv[index + 1], "blands")) {
 				cfg.rule = BLANDS;
@@ -76,6 +78,9 @@ void get_config(int argc, char** argv) {
 			}
 			
 			++index;
+		} else if (check_option(argv[index], "--very-verbose", "-vv") {
+			cfg.vv = TRUE;
+			
 		}
 	}
 	
@@ -98,6 +103,7 @@ static inline void init_config(void) {
 	cfg.pmode		= NONE;
 	cfg.rule		= NO;
 	cfg.verbose	= FALSE;
+	cfg.vv		= FALSE;
 }
 
 static inline void print_help(void) {
@@ -113,6 +119,7 @@ static inline void print_help(void) {
 
 	// Help for Default options.
 	print_help_item("verbose", "v", "Be verbose.");
+	print_help_item("very_verbose", "vv", "Be VERY verbose.");
 	print_help_item("help", "h", "Print this message.");
 }
 

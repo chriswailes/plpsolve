@@ -42,6 +42,7 @@ typedef struct {
 	rule_t rule;
 	
 	bool verbose;
+	bool vv;
 	char* mathprog_filename;
 } config_t;
 

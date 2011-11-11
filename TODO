@@ -1,0 +1,7 @@
+* Change dict_new so that it returns a pointer.
+* Re-organize some of the code that is in dictionary.c.
+* Change dict_t to use matrix_t.
+	* Go through all files to adapt to change.
+* Add a new array that holds values for the constraint rows.
+* Re-evaluate the way Bland's and Professor Y's rules are implemented/used.
+* Re-do some of the commented out debugging prints as very-verbose prints.
