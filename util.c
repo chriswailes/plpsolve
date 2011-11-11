@@ -25,7 +25,7 @@ static inline void print_help_item(char* lng, char* srt, char* help);
 
 // Globals
 
-extern config cfg;
+extern config_t cfg;
 
 // Functions
 
@@ -94,7 +94,7 @@ static inline bool check_option(char* opt, char* lng, char* srt) {
 
 static inline void init_config(void) {
 	cfg.mathprog_filename = 0;
-	cfg.method	= PIVOT;
+	cfg.method	= GS;
 	cfg.pmode		= NONE;
 	cfg.rule		= NO;
 	cfg.verbose	= FALSE;

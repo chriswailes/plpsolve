@@ -18,7 +18,7 @@ typedef enum {
 } bool;
 
 typedef enum {
-	PIVOT
+	GS
 } method_t;
 
 typedef enum {
@@ -43,7 +43,7 @@ typedef struct {
 	
 	bool verbose;
 	char* mathprog_filename;
-} config;
+} config_t;
 
 void get_config(int argc, char** argv);
 

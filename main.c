@@ -20,7 +20,7 @@
 
 // Global Variables
 
-config cfg;
+config_t cfg;
 
 // Functions
 
@@ -47,9 +47,9 @@ int main(int argc, char** argv) {
 	dictionary_init(&dict);
 	
 	switch (cfg.method) {
-		case PIVOT:
+		case GS:
 		default:
-			pivot_kernel(&dict);
+			general_simplex_kernel(&dict);
 			break;
 	}
 	

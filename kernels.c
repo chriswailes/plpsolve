@@ -14,11 +14,11 @@
 
 // Global Variables
 
-extern config cfg;
+extern config_t cfg;
 
 // Functions
 
-void pivot_kernel(dictionary* dict) {
+void general_simplex_kernel(dictionary* dict) {
 	unsigned int iters = 0;
 	elr_t el_result;
 	

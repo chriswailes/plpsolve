@@ -18,7 +18,7 @@
 
 // Global Variables
 
-extern config cfg;
+extern config_t cfg;
 
 void load_lp_file(dictionary* dict) {
 	int index;

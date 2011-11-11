@@ -20,7 +20,7 @@
 
 // Globals
 
-extern config cfg;
+extern config_t cfg;
 
 // Functions
 
@@ -135,7 +135,7 @@ void dictionary_init(dictionary* dict) {
 		}
 
 		dictionary_view(dict);
-		pivot_kernel(dict);
+		general_simplex_kernel(dict);
 		printf("[[[[[After init pivot:]]]]]\n");
 
 		dictionary_view(dict);
