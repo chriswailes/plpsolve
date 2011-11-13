@@ -20,15 +20,18 @@
 
 extern config_t cfg;
 
-void load_lp_file(dict_t* dict) {
+dict_t* load_lp_file(void) {
 	int index;
+	unsigned int num_vars, num_cons;
 	FILE* in;
 	
+	dict_t* dict;
+	
 	if ((in = fopen(cfg.filename, "rt")) != NULL) {
-		fscanf(in, "%i,%i\n", &dict->num_cons, &dict->num_vars);
+		fscanf(in, "%u,%u\n", &num_cons, &num_vars);
 		
 		// Initialize our dictionary struct.
-		dict_new(dict);
+		dict = dict_new(num_vars, num_cons);
 		
 		// Load values from input file.
 		load_objective(in, dict);
@@ -48,6 +51,8 @@ void load_lp_file(dict_t* dict) {
 
 		// Close the input file.
 		fclose(in);
+		
+		return dict;
 		
 	} else {
 		printf("Can't open file %s\n", cfg.filename);

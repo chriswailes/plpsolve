@@ -78,7 +78,7 @@ void get_config(int argc, char** argv) {
 			}
 			
 			++index;
-		} else if (check_option(argv[index], "--very-verbose", "-vv") {
+		} else if (check_option(argv[index], "--very-verbose", "-vv")) {
 			cfg.vv = TRUE;
 			
 		}

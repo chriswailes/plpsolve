@@ -187,38 +187,47 @@ unsigned dict_get_num_unbounded_vars(dict_t* dict) {
 	return num_unbounded_vars;
 }
 
-void dict_new(dict_t* dict) {
+dict_t* dict_new(unsigned int num_vars, unsigned int num_cons) {
 	int index;
+	dict_t* dict;
 	
 	/*
 	 * Allocate the necessary memory.
 	 */
 	
-	dict->objective	= (double*)malloc(dict->num_vars * sizeof(double));
-	dict->matrix		= (double*)malloc(dict->num_vars * dict->num_cons * sizeof(double));
+	dict = malloc(sizeof(dict_t));
 	
-	dict->col_labels = (int*)malloc(dict->num_vars * sizeof(int));
-	dict->row_labels = (int*)malloc(dict->num_cons * sizeof(int));
+	dict->objective	= (double*)malloc(num_vars * sizeof(double));
+	dict->matrix		= (double*)malloc(num_vars * num_cons * sizeof(double));
 	
-	dict->con_bounds.upper = (double*)malloc(dict->num_cons * sizeof(double));
-	dict->con_bounds.lower = (double*)malloc(dict->num_cons * sizeof(double));
+	dict->col_labels = (int*)malloc(num_vars * sizeof(int));
+	dict->row_labels = (int*)malloc(num_cons * sizeof(int));
 	
-	dict->var_bounds.upper = (double*)malloc(dict->num_vars * sizeof(double));
-	dict->var_bounds.lower = (double*)malloc(dict->num_vars * sizeof(double));
+	dict->con_bounds.upper = (double*)malloc(num_cons * sizeof(double));
+	dict->con_bounds.lower = (double*)malloc(num_cons * sizeof(double));
 	
-	dict->var_rests = (rest_t*)malloc(dict->num_vars * sizeof(rest_t));
+	dict->var_bounds.upper = (double*)malloc(num_vars * sizeof(double));
+	dict->var_bounds.lower = (double*)malloc(num_vars * sizeof(double));
 	
-	dict->split_vars = (int*)malloc(dict->num_vars * sizeof(int));
-	memset(dict->split_vars, 0, dict->num_vars * sizeof(int));
+	dict->var_rests = (rest_t*)malloc(num_vars * sizeof(rest_t));
+	
+	dict->split_vars = (int*)malloc(num_vars * sizeof(int));
+	memset(dict->split_vars, 0, num_vars * sizeof(int));
 
 	// Initialize the variable labels.
-	for (index = 1; index <= dict->num_vars; ++index) {
+	for (index = 1; index <= num_vars; ++index) {
 		dict->col_labels[index - 1] = index;
 	}
 	
-	for (index = 1; index <= dict->num_cons; ++index) {
-		dict->row_labels[index - 1] = dict->num_vars + index;
+	for (index = 1; index <= num_cons; ++index) {
+		dict->row_labels[index - 1] = num_vars + index;
 	}
+	
+	// Set the number of variables and constrants for the dictionary.
+	dict->num_vars = num_vars;
+	dict->num_cons = num_cons;
+	
+	return dict;
 }
 
 /*

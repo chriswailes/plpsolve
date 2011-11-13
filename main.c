@@ -25,41 +25,41 @@ config_t cfg;
 // Functions
 
 int main(int argc, char** argv) {
-	dict_t dict;
+	dict_t* dict;
 	unsigned int num_orig_vars;
 
 	get_config(argc, argv);
 	
-	load_lp_file(&dict);
+	dict = load_lp_file();
 	
-	num_orig_vars = dict.num_vars;
+	num_orig_vars = dict->num_vars;
 	
 	if (cfg.mathprog_filename) {
-		output_glpsol(&dict, cfg.mathprog_filename);
+		output_glpsol(dict, cfg.mathprog_filename);
 		exit(0);
 	}
 
 	if (cfg.verbose) {
-		dict_view(&dict);
+		dict_view(dict);
 	}
 
 	// Initialize the dictionary proper.
-	dict_init(&dict);
+	dict_init(dict);
 	
 	switch (cfg.method) {
 		case GS:
 		default:
-			general_simplex_kernel(&dict);
+			general_simplex_kernel(dict);
 			break;
 	}
 	
 	if (cfg.verbose) {
 		printf("Final Dictionary:\n");
-		dict_view(&dict);
+		dict_view(dict);
 	}
 	
-	dict_view_answer(&dict, num_orig_vars);
+	dict_view_answer(dict, num_orig_vars);
 
-	dict_free(&dict);
+	dict_free(dict);
 	return 0;
 }

@@ -90,7 +90,7 @@ infeasible_set_t	dict_infeasible_rows(dict_t *dict);
 void				dict_init(dict_t* dict);
 bool				dict_is_final(dict_t* dict);
 unsigned			dict_get_num_unbounded_vars(dict_t *dict);
-void				dict_new(dict_t* dict);
+dict_t*			dict_new(unsigned int num_vars, unsigned int num_cons);
 void				dict_pivot(dict_t* dict, int col_index, int row_index, rest_t new_rest);
 void				dict_populate_split_vars(dict_t* dict, int starting_split_var);
 void				dict_resize(dict_t* dict, unsigned new_num_vars, unsigned new_num_cons);
