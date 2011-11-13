@@ -9,10 +9,6 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#define MATRIX_VALUE_GET(m, row, col) m->values[row*m->num_cols + col]
-#define MATRIX_VALUE_SET(m, row, col, val) m->values[row*m->num_cols + col] = val
-
-
 typedef struct {
 	unsigned int num_rows;
 	unsigned int num_cols;
@@ -23,5 +19,7 @@ typedef struct {
 void		matrix_free(matrix_t* m);
 matrix_t*	matrix_new(unsigned int rows, unsigned int cols);
 void		matrix_resize(matrix_t* m, unsigned int new_rows, unsigned int new_cols);
+double	matrix_value_get(matrix_t* m, unsigned int row, unsigned int col);
+void		matrix_value_set(matrix_t* m, unsigned int row, unsigned int col, double val);
 
 #endif

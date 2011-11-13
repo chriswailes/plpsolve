@@ -47,7 +47,15 @@ void matrix_resize(matrix_t* m, unsigned int new_rows, unsigned int new_cols) {
 	// Copy the old values over.
 	for (r_index = 0; r_index < MIN(new_rows, m->num_rows); ++r_index) {
 		for (c_index = 0; c_index < MIN(new_cols, m->num_cols); ++ c_index) {
-			new_v[r_index*new_cols + c_index] = MATRIX_VALUE_GET(m, r_index, c_index);
+			new_v[r_index*new_cols + c_index] = matrix_value_get(m, r_index, c_index);
 		}
 	}
+}
+
+inline double matrix_value_get(matrix_t* m, unsigned int row, unsigned int col) {
+	return m->values[row*m->num_cols + col];
+}
+
+inline void matrix_value_set(matrix_t* m, unsigned int row, unsigned int col, double val) {
+	m->values[row*m->num_cols + col] = val;
 }
