@@ -79,7 +79,7 @@ void get_config(int argc, char** argv) {
 			
 			++index;
 		} else if (check_option(argv[index], "--very-verbose", "-vv")) {
-			cfg.vv = TRUE;
+			cfg.verbose = cfg.vv = TRUE;
 			
 		}
 	}
@@ -119,7 +119,7 @@ static inline void print_help(void) {
 
 	// Help for Default options.
 	print_help_item("verbose", "v", "Be verbose.");
-	print_help_item("very_verbose", "vv", "Be VERY verbose.");
+	print_help_item("very_verbose", "vv", "Be VERY verbose.  Implies verbose.");
 	print_help_item("help", "h", "Print this message.");
 }
 

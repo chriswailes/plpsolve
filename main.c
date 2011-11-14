@@ -62,8 +62,10 @@ int main(int argc, char** argv) {
 		dict_view(dict);
 	}
 	
+	printf("Final Values:\n");
 	dict_view_answer(dict, num_orig_vars);
-
+	printf("\n");
+	
 	dict_free(dict);
 	return 0;
 }

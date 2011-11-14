@@ -466,37 +466,53 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 	
 	clr_t cl_result;
 	
+	if (cfg.vv) {
+		printf("Entering and leaving variable analysis:\n");
+	}
+	
 	// Select the entering variable.
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		//~printf("Variable x%d can enter: %s\n", dict->col_labels[index], dict_var_can_enter(dict, index) != NOPE ? "yes" : "no");
-		
-		if (dict_var_can_enter(dict, col_index) != NOPE) {
+		if (dict_var_can_enter(dict, col_index)) {
+			
+			if (cfg.vv) {
+				printf("\tx%u can enter.\n", dict->col_labels[col_index]);
+			}
+			
 			if (cfg.rule == BLANDS) {
 				if (dict->col_labels[col_index] < min_sub) {
-					//~printf("Selecting x%d due to Bland's Rule\n", dict->col_labels[index]);
+					if (cfg.vv) printf("\tSelecting x%u as entering variable due to Bland's Rule\n", dict->col_labels[col_index]);
+					
 					result->entering	= col_index;
 					min_sub			= dict->col_labels[col_index];
 				}
 				
 			} else {
-				//~printf("Found an entering variable at index %d\n", index);
+				
+				if (cfg.vv) printf("\tSelecting x%u as entering variable.\n", dict->col_labels[col_index]);
+				
 				result->entering = col_index;
 				break;
 			}
 		}
 	}
 	
+	if (cfg.vv) printf("\n");
+	
 	/*
 	 * Pick the leaving variable.
 	 */
 	if (dict->objective[result->entering] < 0 && dict->var_rests[result->entering] == UPPER && dict->col_bounds.lower[result->entering] != -INFINITY) {
-		max_constraint = dict->col_bounds.lower[result->entering];
+		max_constraint = fabs(dict->col_bounds.upper[result->entering] - dict->col_bounds.lower[result->entering]);
+		
+		if (cfg.vv) printf("\tx%u can flip to its LOWER bound: t ≤ %- 7.3g\n\n", dict->col_labels[result->entering], max_constraint);
 		
 		result->flip		= TRUE;
 		result->new_rest	= LOWER;
 		
 	} else if (dict->objective[result->entering] > 0 && dict->var_rests[result->entering] == LOWER && dict->col_bounds.upper[result->entering] != INFINITY) {
-		max_constraint = dict->col_bounds.upper[result->entering];
+		max_constraint = fabs(dict->col_bounds.upper[result->entering] - dict->col_bounds.lower[result->entering]);
+		
+		if (cfg.vv) printf("\tx%u can flip to its UPPER bound: t ≤ %- 7.3g\n\n", dict->col_labels[result->entering], max_constraint);
 		
 		result->flip		= TRUE;
 		result->new_rest	= UPPER;
@@ -509,14 +525,15 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
 		dict_var_can_leave(dict, &cl_result, result->entering, row_index);
 		
-		//~printf("Leaving variable: x%d Viable: %-3s Constraint: %f\n", dict->row_labels[index], cl_result.viable != NOPE ? "yes" : "no", cl_result.constraint);
-		
 		if (cl_result.viable) {
+			
+			if (cfg.vv) printf("\tx%u can leave: t ≤ %- 7.3g\n", dict->row_labels[row_index], cl_result.constraint);
+			
 			// Found a new, more constraining, choice.
 			if (cl_result.constraint < max_constraint ||
 				(cfg.rule == BLANDS && (cl_result.constraint == max_constraint && dict->row_labels[row_index] < min_sub))) {
 				
-				//~printf("Selecting x%d\n", dict->row_labels[index]);
+				if (cfg.vv) printf("\tSelecting x%u as leaving variable.\n", dict->row_labels[row_index]);
 				
 				max_constraint		= cl_result.constraint;
 				min_sub			= dict->row_labels[row_index];
@@ -528,25 +545,27 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 		}
 	}
 	
-	//~printf("Flip: %-5s Entering: x%d Leaving: x%d\n", result->flip ? "TRUE" : "FALSE", dict->col_labels[result->entering], dict->row_labels[result->leaving]);
+	if (cfg.vv) {
+		if (result->flip) {
+			printf("\n\tFlip x%u\n\n", dict->col_labels[result->entering]);
+		} else {
+			printf("\n\tPivot with x%u entering and x%u leaving.\n\n", dict->col_labels[result->entering], dict->row_labels[result->leaving]);
+		}
+	}
 }
 
 /*
  * Return should be Good, Bad, and Nope
  */
-viable_t dict_var_can_enter(const dict_t* dict, uint var_index) {
-	//~printf("Objective: %f Lower: %f Upper: %f\n", dict->objective[col_index], dict->col_bounds.lower[col_index], dict->col_bounds.upper[col_index]);
-	
-	if (dict->objective[var_index] == 0) {
-		return BAD;
+bool dict_var_can_enter(const dict_t* dict, uint var_index) {
+	if ( (dict->objective[var_index] == 0) ||
+		(dict->objective[var_index] < 0 && dict->var_rests[var_index] == UPPER) ||
+		(dict->objective[var_index] > 0 && dict->var_rests[var_index] == LOWER)) {
 		
-	} else if ((dict->objective[var_index] < 0 && dict->var_rests[var_index] == UPPER) || (dict->objective[var_index] > 0 && dict->var_rests[var_index] == LOWER)) {
-		//~printf("Returning GOOD\n");
-		return GOOD;
+		return TRUE;
 		
 	} else {
-		//~printf("Returning NOPE\n");
-		return NOPE;
+		return FALSE;
 	}
 }
 
@@ -562,7 +581,7 @@ void dict_var_can_leave(const dict_t* dict, clr_t* result, uint var_index, uint 
 	
 	// If the entering variable's coefficient is 0 this variable can't leave.
 	if (row[var_index] == 0) {
-		result->viable = NOPE;
+		result->viable = FALSE;
 		return;
 	}
 	
@@ -581,18 +600,17 @@ void dict_var_can_leave(const dict_t* dict, clr_t* result, uint var_index, uint 
 	 * entering variable's value.
 	 */
 	if (dict->row_bounds.lower[con_index] <= accum && t_coef < 0) {
-		result->viable		= GOOD;
+		result->viable		= TRUE;
 		result->constraint	= (dict->row_bounds.lower[con_index] - accum) / t_coef;
 		result->new_rest	= LOWER;
 		
 	} else if (accum <= dict->row_bounds.upper[con_index] && t_coef > 0) {
-		result->viable		= GOOD;
+		result->viable		= TRUE;
 		result->constraint	= (dict->row_bounds.upper[con_index] - accum) / t_coef;
 		result->new_rest	= UPPER;
 		
 	} else {
-		//~printf("Non-viable leaving variable with coefficient of %f\n", t_coef);
-		result->viable = NOPE;
+		result->viable = FALSE;
 	}
 }
 
@@ -607,7 +625,7 @@ void dict_view(const dict_t* dict) {
 	// Print column labels.
 	printf("                        ");
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		snprintf(buffer, 10, "x%d", dict->col_labels[col_index]);
+		snprintf(buffer, 10, "x%u", dict->col_labels[col_index]);
 		printf("%8s", buffer);
 	}
 	printf("     value\n");
@@ -615,7 +633,7 @@ void dict_view(const dict_t* dict) {
 	// Print bounds, labels, and values for rows.
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
 		// Format the column label.
-		snprintf(buffer, 10, "x%d", dict->row_labels[row_index]);
+		snprintf(buffer, 10, "x%u", dict->row_labels[row_index]);
 		
 		// Print out bounds and label info.
 		printf("% 7.3g % 7.3g | %4s |", dict->row_bounds.lower[row_index], dict->row_bounds.upper[row_index], buffer);
@@ -662,14 +680,17 @@ void dict_view(const dict_t* dict) {
 void dict_view_answer(const dict_t* dict, uint num_orig_vars) {
 	uint col_index, var_index;
 	double objective = 0.0;
+	char buffer[10];
 	
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 		objective += dict->objective[col_index] * dict_get_var_bound_value(dict, col_index);
 	}
 
-	printf("Objective: %f\n", objective);
+	printf("\t   z = %- 7.3g\n", objective);
 
 	for (var_index = 1; var_index <= num_orig_vars; ++var_index) {
-		printf("x%i = %f\n", var_index, dict_get_var_value_by_label(dict, var_index));
+		snprintf(buffer, 10, "x%u", var_index);
+		
+		printf("\t%4s = %- 7.3g\n", buffer, dict_get_var_value_by_label(dict, var_index));
 	}
 }
