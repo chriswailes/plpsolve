@@ -22,7 +22,7 @@ extern config_t cfg;
 
 dict_t* load_lp_file(void) {
 	int index;
-	unsigned int num_vars, num_cons;
+	uint num_vars, num_cons;
 	FILE* in;
 	
 	dict_t* dict;
@@ -32,6 +32,15 @@ dict_t* load_lp_file(void) {
 		
 		// Initialize our dictionary struct.
 		dict = dict_new(num_vars, num_cons);
+		
+		// Set the variable labels.
+		for (index = 1; index <= num_vars; ++index) {
+			dict->col_labels[index - 1] = index;
+		}
+		
+		for (index = 1; index <= num_cons; ++index) {
+			dict->row_labels[index - 1] = num_vars + index;
+		}
 		
 		// Load values from input file.
 		load_objective(in, dict);
@@ -61,7 +70,7 @@ dict_t* load_lp_file(void) {
 }
 
 void load_constraint_bounds(FILE* in, dict_t* dict) {
-	unsigned i;
+	uint i;
 
 	for (i = 0; i < dict->num_cons; ++i) {
 		if (i)
@@ -81,21 +90,18 @@ void load_constraint_bounds(FILE* in, dict_t* dict) {
 }
 
 void load_matrix(FILE* in, dict_t* dict) {
-	unsigned i, j;
+	uint col_index, row_index;
 	
-	for (j = 0; j < dict->num_cons; ++j) {
-		for (i = 0; i < dict->num_vars; ++i) {
-			if (i)
-				fscanf(in, ", %lf", &dict->matrix[i + j * dict->num_vars]);
-			else
-				fscanf(in, "%lf", &dict->matrix[i + j * dict->num_vars]);
+	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
+		for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+			fscanf(in, col_index ? ", %lf" : "%lf", matrix_get_address(&dict->matrix, row_index, col_index));
 		}
 	}
 	fscanf(in, "\n");
 }
 
 void load_objective(FILE* in, dict_t* dict) {
-	unsigned i;
+	uint i;
 	
 	for (i = 0; i < dict->num_vars; ++i) {
 		if (i)
@@ -107,7 +113,7 @@ void load_objective(FILE* in, dict_t* dict) {
 }
 
 void load_var_bounds(FILE* in, dict_t* dict) {
-	unsigned i;
+	uint i;
 	
 	for (i = 0; i < dict->num_vars; ++i) {
 		if (i)

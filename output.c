@@ -14,62 +14,57 @@
 #include "dictionary.h"
 
 void output_glpsol(dict_t* dict, const char* filename) {
-	int i, j, current_constraint;
+	int col_index, row_index, current_constraint;
 	FILE* out = fopen(filename, "wt");
 	
-	for (i = 0; i < dict->num_vars; ++i) {
-		fprintf(out, "var x%i;\n", dict->col_labels[i]);
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		fprintf(out, "var x%i;\n", dict->col_labels[col_index]);
 	}
 	fprintf(out, "\n");
 	
 	fprintf(out, "maximize objVal: ");
-	for (i = 0; i < dict->num_vars; ++i) {
-		if (i)
-			fprintf(out, " + %f * x%i", dict->objective[i], dict->col_labels[i]);
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		if (col_index)
+			fprintf(out, " + %f * x%i", dict->objective[col_index], dict->col_labels[col_index]);
 		else
-			fprintf(out, "%f * x%i", dict->objective[i], dict->col_labels[i]);
+			fprintf(out, "%f * x%i", dict->objective[col_index], dict->col_labels[col_index]);
 	}
 	fprintf(out, ";\n\n");
 
 	current_constraint = 1;
 
-	for (j = 0; j < dict->num_cons; ++j) {
-		if (dict->con_bounds.lower[j] != INFINITY && dict->con_bounds.lower[j] != -INFINITY) {
+	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
+		if (dict->con_bounds.lower[row_index] != INFINITY && dict->con_bounds.lower[row_index] != -INFINITY) {
 			fprintf(out, "c%i: ", current_constraint);
-			for (i = 0; i < dict->num_vars; ++i) {
-				if (i) {
-					fprintf(out, " + %f * x%i", dict->matrix[j * dict->num_vars + i], dict->col_labels[i]);
-				} else {
-					fprintf(out, "%f * x%i", dict->matrix[j * dict->num_vars + i], dict->col_labels[i]);
-				}
+			
+			for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+				fprintf(out, col_index ? " + %f * x%i" : "%f * x%i", matrix_get_value(&dict->matrix, row_index, col_index), dict->col_labels[col_index]);
 			}
-			fprintf(out, " >= %f;\n", dict->con_bounds.lower[j]);
+			
+			fprintf(out, " >= %f;\n", dict->con_bounds.lower[row_index]);
 			++current_constraint;
 		}
 
-		if (dict->con_bounds.upper[j] != INFINITY && dict->con_bounds.upper[j] != -INFINITY) {
+		if (dict->con_bounds.upper[row_index] != INFINITY && dict->con_bounds.upper[row_index] != -INFINITY) {
 			fprintf(out, "c%i: ", current_constraint);
 			
-			for (i = 0; i < dict->num_vars; ++i) {
-				if (i) {
-					fprintf(out, " + %f * x%i", dict->matrix[j * dict->num_vars + i], dict->col_labels[i]);
-				} else {
-					fprintf(out, "%f * x%i", dict->matrix[j * dict->num_vars + i], dict->col_labels[i]);
-				}
+			for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+				fprintf(out, col_index ? " + %f * x%i" : "%f * x%i", matrix_get_value(&dict->matrix, row_index, col_index), dict->col_labels[col_index]);
 			}
-			fprintf(out, " <= %f;\n", dict->con_bounds.upper[j]);
+			
+			fprintf(out, " <= %f;\n", dict->con_bounds.upper[row_index]);
 			++current_constraint;
 		}
 	}
 	
-	for (i = 0; i < dict->num_vars; ++i) {
-		if (dict->var_bounds.lower[i] != INFINITY && dict->var_bounds.lower[i] != -INFINITY) {
-			fprintf(out, "c%i: x%i >= %f;\n", current_constraint, dict->col_labels[i], dict->var_bounds.lower[i]);
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		if (dict->var_bounds.lower[col_index] != INFINITY && dict->var_bounds.lower[col_index] != -INFINITY) {
+			fprintf(out, "c%i: x%i >= %f;\n", current_constraint, dict->col_labels[col_index], dict->var_bounds.lower[col_index]);
 			++current_constraint;
 		}
 
-		if (dict->var_bounds.upper[i] != INFINITY && dict->var_bounds.upper[i] != -INFINITY) {
-			fprintf(out, "c%i: x%i <= %f;\n", current_constraint, dict->col_labels[i], dict->var_bounds.upper[i]);
+		if (dict->var_bounds.upper[col_index] != INFINITY && dict->var_bounds.upper[col_index] != -INFINITY) {
+			fprintf(out, "c%i: x%i <= %f;\n", current_constraint, dict->col_labels[col_index], dict->var_bounds.upper[col_index]);
 			++current_constraint;
 		}
 	}
@@ -77,11 +72,11 @@ void output_glpsol(dict_t* dict, const char* filename) {
 	
 	fprintf(out, "solve; # directive to solve\n");
 	fprintf(out, "display objVal, ");
-	for (i = 0; i < dict->num_vars; ++i) {
-		if (i == (dict->num_vars - 1)) {
-			fprintf(out, "x%i;\n", dict->col_labels[i]);
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		if (col_index == (dict->num_vars - 1)) {
+			fprintf(out, "x%i;\n", dict->col_labels[col_index]);
 		} else {
-			fprintf(out, "x%i, ", dict->col_labels[i]);
+			fprintf(out, "x%i, ", dict->col_labels[col_index]);
 		}
 	}
 	fprintf(out, "end;\n");

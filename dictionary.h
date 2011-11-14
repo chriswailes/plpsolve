@@ -9,6 +9,9 @@
 #ifndef DICTIONARY_H
 #define DICTIONARY_H
 
+// Standard Includes
+#include <sys/types.h>
+
 // Project Includes
 #include "matrix.h"
 #include "util.h"
@@ -39,8 +42,8 @@ typedef struct {
 
 // Entering-and-Leaving-Result type
 typedef struct {
-	int entering;
-	int leaving;
+	uint entering;
+	uint leaving;
 	
 	rest_t new_rest;
 	
@@ -48,33 +51,33 @@ typedef struct {
 } elr_t;
 
 typedef struct {
-	int infeasible_row;
-	double infeasible_amount;
-} infeasible_row_t;
+	uint row_index;
+	double amount;
+} irow_t;
 
 typedef struct {
-	infeasible_row_t* infeasible_rows;
-	unsigned num_infeasible_rows;
-} infeasible_set_t;
+	irow_t* rows;
+	uint num_rows;
+} iset_t;
 
 typedef struct {
 	int* unbounded_vars;
 } unbounded_vars_t;
 
 typedef struct {
-	int num_vars, num_cons;
+	uint num_vars, num_cons;
 	
 	double* objective;
-	double* matrix;
+	matrix_t matrix;
 	
 	// These labels correspond to non-basis variables.
-	int* col_labels;
+	uint* col_labels;
 	// These labels correspond to basis variables.
-	int* row_labels;
+	uint* row_labels;
 	
 	// The location of the pair of a split.  Unidirectional, so only one of a
 	// pair points at the other (to prevent dupes).
-	int* split_vars;
+	uint* split_vars;
 
 	bounds_t con_bounds;
 	bounds_t var_bounds;
@@ -82,21 +85,23 @@ typedef struct {
 	rest_t* var_rests;
 } dict_t;
 
-bool is_unbounded_var_at_index(dict_t *dict, int index);
-void select_entering_and_leaving(dict_t* dict, elr_t* result);
-
-void				dict_free(dict_t* dict);
-infeasible_set_t	dict_infeasible_rows(dict_t *dict);
-void				dict_init(dict_t* dict);
-bool				dict_is_final(dict_t* dict);
-unsigned			dict_get_num_unbounded_vars(dict_t *dict);
-dict_t*			dict_new(unsigned int num_vars, unsigned int num_cons);
-void				dict_pivot(dict_t* dict, int col_index, int row_index, rest_t new_rest);
-void				dict_populate_split_vars(dict_t* dict, int starting_split_var);
-void				dict_resize(dict_t* dict, unsigned new_num_vars, unsigned new_num_cons);
-viable_t			dict_var_can_enter(dict_t* dict, int col_index);
-void				dict_var_can_leave(dict_t* dict, clr_t* result, int col_index, int row_index);
-void				dict_view(const dict_t* dict);
-void				dict_view_answer(const dict_t* dict, unsigned num_orig_vars);
+void		dict_free(dict_t* dict);
+double	dict_get_constraint_value(const dict_t* dict, uint row_index);
+iset_t	dict_get_infeasible_rows(const dict_t* dict);
+uint		dict_get_num_unbounded_vars(const dict_t* dict);
+double	dict_get_var_value_by_label(const dict_t* dict, uint var_label);
+double	dict_get_var_bound_value(const dict_t* dict, uint col_index);
+void		dict_init(dict_t* dict);
+bool		dict_is_final(const dict_t* dict);
+dict_t*	dict_new(uint num_vars, uint num_cons);
+void		dict_pivot(dict_t* dict, uint col_index, uint row_index, rest_t new_rest);
+void		dict_populate_split_vars(dict_t* dict, uint starting_split_var);
+void		dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons);
+void		dict_select_entering_and_leaving(const dict_t* dict, elr_t* result);
+viable_t	dict_var_can_enter(const dict_t* dict, uint col_index);
+void		dict_var_can_leave(const dict_t* dict, clr_t* result, uint col_index, uint row_index);
+bool		dict_var_is_unbounded(const dict_t* dict, uint index);
+void		dict_view(const dict_t* dict);
+void		dict_view_answer(const dict_t* dict, uint num_orig_vars);
 
 #endif

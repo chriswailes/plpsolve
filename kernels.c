@@ -19,7 +19,7 @@ extern config_t cfg;
 // Functions
 
 void general_simplex_kernel(dict_t* dict) {
-	unsigned int iters = 0;
+	uint iters = 0;
 	elr_t el_result;
 	
 	//~printf("\n\n");
@@ -29,7 +29,7 @@ void general_simplex_kernel(dict_t* dict) {
 	while (iters < 8) {
 		//~printf("Iteration %d\n", iters);
 		
-		select_entering_and_leaving(dict, &el_result);
+		dict_select_entering_and_leaving(dict, &el_result);
 		
 		if (el_result.flip) {
 			dict->var_rests[el_result.entering] = el_result.new_rest;
