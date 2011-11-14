@@ -34,37 +34,37 @@ void output_glpsol(dict_t* dict, const char* filename) {
 	current_constraint = 1;
 
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
-		if (dict->con_bounds.lower[row_index] != INFINITY && dict->con_bounds.lower[row_index] != -INFINITY) {
+		if (dict->row_bounds.lower[row_index] != INFINITY && dict->row_bounds.lower[row_index] != -INFINITY) {
 			fprintf(out, "c%i: ", current_constraint);
 			
 			for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 				fprintf(out, col_index ? " + %f * x%i" : "%f * x%i", matrix_get_value(&dict->matrix, row_index, col_index), dict->col_labels[col_index]);
 			}
 			
-			fprintf(out, " >= %f;\n", dict->con_bounds.lower[row_index]);
+			fprintf(out, " >= %f;\n", dict->row_bounds.lower[row_index]);
 			++current_constraint;
 		}
 
-		if (dict->con_bounds.upper[row_index] != INFINITY && dict->con_bounds.upper[row_index] != -INFINITY) {
+		if (dict->row_bounds.upper[row_index] != INFINITY && dict->row_bounds.upper[row_index] != -INFINITY) {
 			fprintf(out, "c%i: ", current_constraint);
 			
 			for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 				fprintf(out, col_index ? " + %f * x%i" : "%f * x%i", matrix_get_value(&dict->matrix, row_index, col_index), dict->col_labels[col_index]);
 			}
 			
-			fprintf(out, " <= %f;\n", dict->con_bounds.upper[row_index]);
+			fprintf(out, " <= %f;\n", dict->row_bounds.upper[row_index]);
 			++current_constraint;
 		}
 	}
 	
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		if (dict->var_bounds.lower[col_index] != INFINITY && dict->var_bounds.lower[col_index] != -INFINITY) {
-			fprintf(out, "c%i: x%i >= %f;\n", current_constraint, dict->col_labels[col_index], dict->var_bounds.lower[col_index]);
+		if (dict->col_bounds.lower[col_index] != INFINITY && dict->col_bounds.lower[col_index] != -INFINITY) {
+			fprintf(out, "c%i: x%i >= %f;\n", current_constraint, dict->col_labels[col_index], dict->col_bounds.lower[col_index]);
 			++current_constraint;
 		}
 
-		if (dict->var_bounds.upper[col_index] != INFINITY && dict->var_bounds.upper[col_index] != -INFINITY) {
-			fprintf(out, "c%i: x%i <= %f;\n", current_constraint, dict->col_labels[col_index], dict->var_bounds.upper[col_index]);
+		if (dict->col_bounds.upper[col_index] != INFINITY && dict->col_bounds.upper[col_index] != -INFINITY) {
+			fprintf(out, "c%i: x%i <= %f;\n", current_constraint, dict->col_labels[col_index], dict->col_bounds.upper[col_index]);
 			++current_constraint;
 		}
 	}

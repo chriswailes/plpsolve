@@ -33,10 +33,10 @@ void dict_free(dict_t* dict) {
 	free(dict->col_labels);
 	free(dict->row_labels);
 	
-	free(dict->con_bounds.upper);
-	free(dict->con_bounds.lower);
-	free(dict->var_bounds.upper);
-	free(dict->var_bounds.lower);
+	free(dict->row_bounds.upper);
+	free(dict->row_bounds.lower);
+	free(dict->col_bounds.upper);
+	free(dict->col_bounds.lower);
 	
 	free(dict->var_rests);
 	
@@ -49,12 +49,12 @@ void dict_free(dict_t* dict) {
  * 		the row pointer each time.  However, I do believe that inlining and
  * 		common sub-expression elimination should take care of that for us.
  */
-double dict_get_constraint_value(const dict_t* dict, uint row_index) {
+double dict_get_constraint_value(const dict_t* dict, uint con_index) {
 	uint col_index;
 	double con_val = 0;
 	
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		con_val += matrix_get_value(&dict->matrix, row_index, col_index) * dict_get_var_bound_value(dict, col_index);
+		con_val += matrix_get_value(&dict->matrix, con_index, col_index) * dict_get_var_bound_value(dict, col_index);
 	}
 	
 	return con_val;
@@ -72,7 +72,7 @@ iset_t dict_get_infeasible_rows(const dict_t* dict) {
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
 		con_val = dict_get_constraint_value(dict, row_index);
 		
-		if ((con_val < dict->con_bounds.lower[row_index]) || (con_val > dict->con_bounds.upper[row_index])) {
+		if ((con_val < dict->row_bounds.lower[row_index]) || (con_val > dict->row_bounds.upper[row_index])) {
 
 			// Increment the number of infeasible rows.
 			++iset.num_rows;
@@ -81,7 +81,7 @@ iset_t dict_get_infeasible_rows(const dict_t* dict) {
 			iset.rows = realloc(iset.rows, iset.num_rows * sizeof(irow_t));
 			
 			iset.rows[iset.num_rows - 1].row_index	= row_index;
-			iset.rows[iset.num_rows - 1].amount	= (con_val < dict->con_bounds.lower[row_index] ? dict->con_bounds.lower : dict->con_bounds.upper)[row_index] - con_val;
+			iset.rows[iset.num_rows - 1].amount	= (con_val < dict->row_bounds.lower[row_index] ? dict->row_bounds.lower : dict->row_bounds.upper)[row_index] - con_val;
 		}
 	}
 
@@ -101,8 +101,8 @@ uint dict_get_num_unbounded_vars(const dict_t* dict) {
 	return num_unbounded_vars;
 }
 
-inline double dict_get_var_bound_value(const dict_t* dict, uint col_index) {
-	return (dict->var_rests[col_index] == UPPER ? dict->var_bounds.upper : dict->var_bounds.lower)[col_index];
+inline double dict_get_var_bound_value(const dict_t* dict, uint var_index) {
+	return (dict->var_rests[var_index] == UPPER ? dict->col_bounds.upper : dict->col_bounds.lower)[var_index];
 }
 
 double dict_get_var_value_by_label(const dict_t* dict, uint var_label) {
@@ -179,17 +179,17 @@ void dict_init(dict_t* dict) {
 	
 	for (i = 0; i < iset.num_rows; ++i) {
 		dict->objective[i + old_num_vars]			= -1;
-		dict->var_bounds.lower[i + old_num_vars]	= 0;
+		dict->col_bounds.lower[i + old_num_vars]	= 0;
 		dict->col_labels[old_num_vars + i]			= 1 + i + (dict->num_vars - iset.num_rows) + dict->num_cons;
 		dict->var_rests[old_num_vars + i]			= UPPER;
 		
 		if (iset.rows[i].amount < 0) {
 			//FIXME: During shrinking this can segfault
-			dict->var_bounds.upper[old_num_vars + i] = -iset.rows[i].amount;
+			dict->col_bounds.upper[old_num_vars + i] = -iset.rows[i].amount;
 			matrix_set_value(&dict->matrix, iset.rows[i].row_index, old_num_vars + i, -1);
 			
 		} else {
-			dict->var_bounds.upper[old_num_vars + i] = iset.rows[i].amount;
+			dict->col_bounds.upper[old_num_vars + i] = iset.rows[i].amount;
 			matrix_set_value(&dict->matrix, iset.rows[i].row_index, old_num_vars + i, 1);
 		}
 	}
@@ -206,14 +206,14 @@ void dict_init(dict_t* dict) {
 	
 	for (i = 0; i < dict->num_vars; ++i) {
 		if (dict->col_labels[i] > (old_num_vars + old_num_cons)) {
-			dict->var_bounds.lower[i] = 0;
-			dict->var_bounds.upper[i] = 0;
+			dict->col_bounds.lower[i] = 0;
+			dict->col_bounds.upper[i] = 0;
 		}
 	}
 	for (i = 0; i < dict->num_cons; ++i) {
 		if (dict->row_labels[i] > (old_num_vars + old_num_cons)) {
-			dict->con_bounds.lower[i] = 0;
-			dict->con_bounds.upper[i] = 0;
+			dict->row_bounds.lower[i] = 0;
+			dict->row_bounds.upper[i] = 0;
 		}
 	}
 	
@@ -250,11 +250,11 @@ dict_t* dict_new(uint num_vars, uint num_cons) {
 	dict->col_labels = (uint*)malloc(num_vars * sizeof(uint));
 	dict->row_labels = (uint*)malloc(num_cons * sizeof(uint));
 	
-	dict->con_bounds.upper = (double*)malloc(num_cons * sizeof(double));
-	dict->con_bounds.lower = (double*)malloc(num_cons * sizeof(double));
+	dict->row_bounds.upper = (double*)malloc(num_cons * sizeof(double));
+	dict->row_bounds.lower = (double*)malloc(num_cons * sizeof(double));
 	
-	dict->var_bounds.upper = (double*)malloc(num_vars * sizeof(double));
-	dict->var_bounds.lower = (double*)malloc(num_vars * sizeof(double));
+	dict->col_bounds.upper = (double*)malloc(num_vars * sizeof(double));
+	dict->col_bounds.lower = (double*)malloc(num_vars * sizeof(double));
 	
 	dict->var_rests = (rest_t*)malloc(num_vars * sizeof(rest_t));
 	
@@ -283,8 +283,8 @@ dict_t* dict_new(uint num_vars, uint num_cons) {
  * Then to (3):
  * 	xn = (c1/-cj)*x1 + (c2/-cj)*x2 + (1/-cj)*xm + ... + (cn/-cj)*xn
  */
-void dict_pivot(dict_t* dict, uint col_index, uint row_index, rest_t new_rest) {
-	uint index0, index1;
+void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest) {
+	uint row_index, col_index;
 	
 	double  coefficient, swap;
 	double* tmp_row;
@@ -293,44 +293,44 @@ void dict_pivot(dict_t* dict, uint col_index, uint row_index, rest_t new_rest) {
 	tmp_row = (double*)malloc(dict->num_vars * sizeof(double));
 	
 	// Copy the pivot row.
-	memcpy(tmp_row, matrix_get_row(&dict->matrix, row_index), dict->num_vars * sizeof(double));
+	memcpy(tmp_row, matrix_get_row(&dict->matrix, con_index), dict->num_vars * sizeof(double));
 	
 	// Grab the coefficient from the pivot column, and then replace it.
-	coefficient = -tmp_row[col_index];
-	tmp_row[col_index] = -1.0;
+	coefficient = -tmp_row[var_index];
+	tmp_row[var_index] = -1.0;
 	
 	// Divide the vector by the coefficient, converting to form 3.
-	for (index0 = 0; index0 < dict->num_vars; ++index0) {
-		tmp_row[index0] /= coefficient;
+	for (row_index = 0; row_index < dict->num_vars; ++row_index) {
+		tmp_row[row_index] /= coefficient;
 	}
 
 	// Replace old row with new row.
-	memcpy(matrix_get_row(&dict->matrix, row_index), tmp_row, dict->num_vars * sizeof(double));
+	memcpy(matrix_get_row(&dict->matrix, con_index), tmp_row, dict->num_vars * sizeof(double));
 	
 	// Substitute new rows into old rows in the matrix.
-	for (index0 = 0; index0 < dict->num_cons; ++index0) {
-		if (index0 != row_index) {
-			coefficient = matrix_get_value(&dict->matrix, index0, col_index);
+	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
+		if (row_index != con_index) {
+			coefficient = matrix_get_value(&dict->matrix, row_index, var_index);
 			
-			for (index1 = 0; index1 < dict->num_vars; ++index1) {
-				if (index1 == col_index) {
-					matrix_set_value(&dict->matrix, index0, index1, coefficient * tmp_row[index1]);
+			for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+				if (col_index == var_index) {
+					matrix_set_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
 					
 				} else {
-					matrix_accum_value(&dict->matrix, index0, index1, coefficient * tmp_row[index1]);
+					matrix_accum_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
 				}
 			}
 		}
 	}
 	
 	// Perform the same steps for the objective function.
-	coefficient = dict->objective[col_index];
-	for (index0 = 0; index0 < dict->num_vars; ++index0) {
-		if (index0 == col_index) {
-			dict->objective[index0]  = coefficient * tmp_row[index0];
+	coefficient = dict->objective[var_index];
+	for (row_index = 0; row_index < dict->num_vars; ++row_index) {
+		if (row_index == var_index) {
+			dict->objective[row_index]  = coefficient * tmp_row[row_index];
 			
 		} else {
-			dict->objective[index0] += coefficient * tmp_row[index0];
+			dict->objective[row_index] += coefficient * tmp_row[row_index];
 		}
 	}
 	
@@ -338,22 +338,22 @@ void dict_pivot(dict_t* dict, uint col_index, uint row_index, rest_t new_rest) {
 	 * Swap bounds and labels
 	 */
 	
-	swap						= dict->col_labels[col_index];
-	dict->col_labels[col_index]	= dict->row_labels[row_index];
-	dict->row_labels[row_index]	= swap;
+	swap						= dict->col_labels[var_index];
+	dict->col_labels[var_index]	= dict->row_labels[con_index];
+	dict->row_labels[con_index]	= swap;
 	
-	swap							= dict->var_bounds.upper[col_index];
-	dict->var_bounds.upper[col_index]	= dict->con_bounds.upper[row_index];
-	dict->con_bounds.upper[row_index]	= swap;
+	swap							= dict->col_bounds.upper[var_index];
+	dict->col_bounds.upper[var_index]	= dict->row_bounds.upper[con_index];
+	dict->row_bounds.upper[con_index]	= swap;
 	
-	swap							= dict->var_bounds.lower[col_index];
-	dict->var_bounds.lower[col_index]	= dict->con_bounds.lower[row_index];
-	dict->con_bounds.lower[row_index]	= swap;
+	swap							= dict->col_bounds.lower[var_index];
+	dict->col_bounds.lower[var_index]	= dict->row_bounds.lower[con_index];
+	dict->row_bounds.lower[con_index]	= swap;
 	
 	/*
 	 * Set the new resting bound appropriately.
 	 */
-	dict->var_rests[col_index] = new_rest;
+	dict->var_rests[var_index] = new_rest;
 	
 	// Free our temporary row.
 	free(tmp_row);
@@ -377,11 +377,11 @@ void dict_populate_split_vars(dict_t* dict, uint starting_split_var) {
 				}
 			}
 			
-			dict->var_bounds.upper[next_split_var] = INFINITY;
-			dict->var_bounds.lower[next_split_var] = 0;
+			dict->col_bounds.upper[next_split_var] = INFINITY;
+			dict->col_bounds.lower[next_split_var] = 0;
 			
-			dict->var_bounds.upper[col_index] = INFINITY;
-			dict->var_bounds.lower[col_index] = 0;
+			dict->col_bounds.upper[col_index] = INFINITY;
+			dict->col_bounds.lower[col_index] = 0;
 
 			dict->var_rests[next_split_var]	= LOWER;
 			dict->var_rests[col_index]		= LOWER;
@@ -417,9 +417,9 @@ void dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons) {
 	memcpy(new_objective, dict->objective, sizeof(double) * MIN(new_num_vars, dict->num_vars));
 	dict->objective = new_objective;
 
-	new_col_labels = malloc(sizeof(int) * new_num_vars);
-	memset(new_col_labels, 0, sizeof(int) * new_num_vars);
-	memcpy(new_col_labels, dict->col_labels, sizeof(int) * MIN(new_num_vars, dict->num_vars));
+	new_col_labels = malloc(sizeof(uint) * new_num_vars);
+	memset(new_col_labels, 0, sizeof(uint) * new_num_vars);
+	memcpy(new_col_labels, dict->col_labels, sizeof(uint) * MIN(new_num_vars, dict->num_vars));
 	dict->col_labels = new_col_labels;
 
 	new_var_rests = malloc(sizeof(rest_t) * new_num_vars);
@@ -427,9 +427,9 @@ void dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons) {
 	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * MIN(new_num_vars, dict->num_vars));
 	dict->var_rests = new_var_rests;
 
-	new_split_vars = malloc(sizeof(int) * new_num_vars);
-	memset(new_split_vars, 0, sizeof(int) * new_num_vars);
-	memcpy(new_split_vars, dict->split_vars, sizeof(int) * MIN(new_num_vars, dict->num_vars));
+	new_split_vars = malloc(sizeof(uint) * new_num_vars);
+	memset(new_split_vars, 0, sizeof(uint) * new_num_vars);
+	memcpy(new_split_vars, dict->split_vars, sizeof(uint) * MIN(new_num_vars, dict->num_vars));
 	dict->split_vars = new_split_vars;
 	
 	new_var_bounds.lower = malloc(sizeof(double) * new_num_vars);
@@ -438,13 +438,13 @@ void dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons) {
 	new_var_bounds.upper = malloc(sizeof(double) * new_num_vars);
 	memset(new_var_bounds.upper, 0, (sizeof(double) * new_num_vars));
 
-	memcpy(new_var_bounds.lower, dict->var_bounds.lower, sizeof(double) * MIN(new_num_vars, dict->num_vars));
-	memcpy(new_var_bounds.upper, dict->var_bounds.upper, sizeof(double) * MIN(new_num_vars, dict->num_vars));
-	dict->var_bounds = new_var_bounds;
+	memcpy(new_var_bounds.lower, dict->col_bounds.lower, sizeof(double) * MIN(new_num_vars, dict->num_vars));
+	memcpy(new_var_bounds.upper, dict->col_bounds.upper, sizeof(double) * MIN(new_num_vars, dict->num_vars));
+	dict->col_bounds = new_var_bounds;
 
-	new_row_labels = malloc(sizeof(int) * new_num_cons);
-	memset(new_row_labels, 0, (sizeof(int) * new_num_cons));
-	memcpy(new_row_labels, dict->row_labels, sizeof(int) * MIN(new_num_cons, dict->num_cons));
+	new_row_labels = malloc(sizeof(uint) * new_num_cons);
+	memset(new_row_labels, 0, (sizeof(uint) * new_num_cons));
+	memcpy(new_row_labels, dict->row_labels, sizeof(uint) * MIN(new_num_cons, dict->num_cons));
 	dict->row_labels = new_row_labels;
 
 	new_con_bounds.lower = malloc(sizeof(double) * new_num_cons);
@@ -453,9 +453,9 @@ void dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons) {
 	new_con_bounds.upper = malloc(sizeof(double) * new_num_cons);
 	memset(new_con_bounds.upper, 0, (sizeof(double) * new_num_cons));
 
-	memcpy(new_con_bounds.lower, dict->con_bounds.lower, sizeof(double) * MIN(new_num_cons, dict->num_cons));
-	memcpy(new_con_bounds.upper, dict->con_bounds.upper, sizeof(double) * MIN(new_num_cons, dict->num_cons));
-	dict->con_bounds = new_con_bounds;
+	memcpy(new_con_bounds.lower, dict->row_bounds.lower, sizeof(double) * MIN(new_num_cons, dict->num_cons));
+	memcpy(new_con_bounds.upper, dict->row_bounds.upper, sizeof(double) * MIN(new_num_cons, dict->num_cons));
+	dict->row_bounds = new_con_bounds;
 	
 	matrix_resize(&dict->matrix, new_num_cons, new_num_vars);
 
@@ -498,14 +498,14 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 	/*
 	 * Pick the leaving variable.
 	 */
-	if (dict->objective[result->entering] < 0 && dict->var_rests[result->entering] == UPPER && dict->var_bounds.lower[result->entering] != -INFINITY) {
-		max_constraint = dict->var_bounds.lower[result->entering];
+	if (dict->objective[result->entering] < 0 && dict->var_rests[result->entering] == UPPER && dict->col_bounds.lower[result->entering] != -INFINITY) {
+		max_constraint = dict->col_bounds.lower[result->entering];
 		
 		result->flip		= TRUE;
 		result->new_rest	= LOWER;
 		
-	} else if (dict->objective[result->entering] > 0 && dict->var_rests[result->entering] == LOWER && dict->var_bounds.upper[result->entering] != INFINITY) {
-		max_constraint = dict->var_bounds.upper[result->entering];
+	} else if (dict->objective[result->entering] > 0 && dict->var_rests[result->entering] == LOWER && dict->col_bounds.upper[result->entering] != INFINITY) {
+		max_constraint = dict->col_bounds.upper[result->entering];
 		
 		result->flip		= TRUE;
 		result->new_rest	= UPPER;
@@ -543,13 +543,13 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 /*
  * Return should be Good, Bad, and Nope
  */
-viable_t dict_var_can_enter(const dict_t* dict, uint col_index) {
-	//~printf("Objective: %f Lower: %f Upper: %f\n", dict->objective[col_index], dict->var_bounds.lower[col_index], dict->var_bounds.upper[col_index]);
+viable_t dict_var_can_enter(const dict_t* dict, uint var_index) {
+	//~printf("Objective: %f Lower: %f Upper: %f\n", dict->objective[col_index], dict->col_bounds.lower[col_index], dict->col_bounds.upper[col_index]);
 	
-	if (dict->objective[col_index] == 0) {
+	if (dict->objective[var_index] == 0) {
 		return BAD;
 		
-	} else if ((dict->objective[col_index] < 0 && dict->var_rests[col_index] == UPPER) || (dict->objective[col_index] > 0 && dict->var_rests[col_index] == LOWER)) {
+	} else if ((dict->objective[var_index] < 0 && dict->var_rests[var_index] == UPPER) || (dict->objective[var_index] > 0 && dict->var_rests[var_index] == LOWER)) {
 		//~printf("Returning GOOD\n");
 		return GOOD;
 		
@@ -564,13 +564,13 @@ viable_t dict_var_can_enter(const dict_t* dict, uint col_index) {
  * can leave when a given variable (referenced by the corresponding column in
  * the matrix) is entering.
  */
-void dict_var_can_leave(const dict_t* dict, clr_t* result, uint col_index, uint row_index) {
+void dict_var_can_leave(const dict_t* dict, clr_t* result, uint var_index, uint con_index) {
 	double accum;
 	double t_coef;
-	double* row = matrix_get_row(&dict->matrix, row_index);
+	double* row = matrix_get_row(&dict->matrix, con_index);
 	
 	// If the entering variable's coefficient is 0 this variable can't leave.
-	if (row[col_index] == 0) {
+	if (row[var_index] == 0) {
 		result->viable = NOPE;
 		return;
 	}
@@ -579,24 +579,24 @@ void dict_var_can_leave(const dict_t* dict, clr_t* result, uint col_index, uint 
 	 * Accumulate the constant given the resting bounds for the non-basic
 	 * variables.
 	 */
-	accum = dict_get_constraint_value(dict, row_index);
+	accum = dict_get_constraint_value(dict, con_index);
 	
 	// Get the coefficient for t.
-	t_coef  = dict->var_rests[col_index] == UPPER ? -1.0 : 1.0;
-	t_coef *= row[col_index];
+	t_coef  = dict->var_rests[var_index] == UPPER ? -1.0 : 1.0;
+	t_coef *= row[var_index];
 	
 	/*
 	 * Calculate the amount this leaving variable choice constrains the
 	 * entering variable's value.
 	 */
-	if (dict->con_bounds.lower[row_index] <= accum && t_coef < 0) {
+	if (dict->row_bounds.lower[con_index] <= accum && t_coef < 0) {
 		result->viable		= GOOD;
-		result->constraint	= (dict->con_bounds.lower[row_index] - accum) / t_coef;
+		result->constraint	= (dict->row_bounds.lower[con_index] - accum) / t_coef;
 		result->new_rest	= LOWER;
 		
-	} else if (accum <= dict->con_bounds.upper[row_index] && t_coef > 0) {
+	} else if (accum <= dict->row_bounds.upper[con_index] && t_coef > 0) {
 		result->viable		= GOOD;
-		result->constraint	= (dict->con_bounds.upper[row_index] - accum) / t_coef;
+		result->constraint	= (dict->row_bounds.upper[con_index] - accum) / t_coef;
 		result->new_rest	= UPPER;
 		
 	} else {
@@ -605,8 +605,8 @@ void dict_var_can_leave(const dict_t* dict, clr_t* result, uint col_index, uint 
 	}
 }
 
-inline bool dict_var_is_unbounded(const dict_t* dict, uint col_index) {
-	return dict->var_bounds.upper[col_index] == INFINITY && dict->var_bounds.lower[col_index] == -INFINITY;
+inline bool dict_var_is_unbounded(const dict_t* dict, uint var_index) {
+	return dict->col_bounds.upper[var_index] == INFINITY && dict->col_bounds.lower[var_index] == -INFINITY;
 }
 
 void dict_view(const dict_t* dict) {
@@ -639,7 +639,7 @@ void dict_view(const dict_t* dict) {
 
 	printf("Constraint bounds:\n");
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
-		printf("(%4.3g, %4.3g) ", dict->con_bounds.lower[row_index], dict->con_bounds.upper[row_index]);
+		printf("(%4.3g, %4.3g) ", dict->row_bounds.lower[row_index], dict->row_bounds.upper[row_index]);
 	}
 	printf("\n\n");
 
@@ -651,7 +651,7 @@ void dict_view(const dict_t* dict) {
 		if (dict->var_rests[col_index] == LOWER)
 			printf("[");
 			
-		printf("%4.3g", dict->var_bounds.lower[col_index]);
+		printf("%4.3g", dict->col_bounds.lower[col_index]);
 		
 		if (dict->var_rests[col_index] == LOWER)
 			printf("]");
@@ -661,7 +661,7 @@ void dict_view(const dict_t* dict) {
 		if (dict->var_rests[col_index] == UPPER)
 			printf("[");
 		
-		printf("%4.3g", dict->var_bounds.upper[col_index]);
+		printf("%4.3g", dict->col_bounds.upper[col_index]);
 		
 		if (dict->var_rests[col_index] == UPPER)
 			printf("]");

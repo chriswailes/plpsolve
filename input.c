@@ -50,7 +50,7 @@ dict_t* load_lp_file(void) {
 		
 		// Pick the initial resting bounds for the variables.
 		for (index = 0; index < dict->num_vars; ++index) {
-			if ((dict->objective[index] >= 0 && dict->var_bounds.upper[index] < INFINITY) || (dict->var_bounds.lower[index] == -INFINITY)) {
+			if ((dict->objective[index] >= 0 && dict->col_bounds.upper[index] < INFINITY) || (dict->col_bounds.lower[index] == -INFINITY)) {
 				dict->var_rests[index] = UPPER;
 				
 			} else {
@@ -74,17 +74,17 @@ void load_constraint_bounds(FILE* in, dict_t* dict) {
 
 	for (i = 0; i < dict->num_cons; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &dict->con_bounds.lower[i]);
+			fscanf(in, ", %lf", &dict->row_bounds.lower[i]);
 		else
-			fscanf(in, "%lf", &dict->con_bounds.lower[i]);
+			fscanf(in, "%lf", &dict->row_bounds.lower[i]);
 	}
 	fscanf(in, "\n");
 
 	for (i = 0; i < dict->num_cons; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &dict->con_bounds.upper[i]);
+			fscanf(in, ", %lf", &dict->row_bounds.upper[i]);
 		else
-			fscanf(in, "%lf", &dict->con_bounds.upper[i]);
+			fscanf(in, "%lf", &dict->row_bounds.upper[i]);
 	}
 	fscanf(in, "\n");
 }
@@ -117,17 +117,17 @@ void load_var_bounds(FILE* in, dict_t* dict) {
 	
 	for (i = 0; i < dict->num_vars; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &dict->var_bounds.lower[i]);
+			fscanf(in, ", %lf", &dict->col_bounds.lower[i]);
 		else
-			fscanf(in, "%lf", &dict->var_bounds.lower[i]);
+			fscanf(in, "%lf", &dict->col_bounds.lower[i]);
 	}
 	fscanf(in, "\n");
 
 	for (i = 0; i < dict->num_vars; ++i) {
 		if (i)
-			fscanf(in, ", %lf", &dict->var_bounds.upper[i]);
+			fscanf(in, ", %lf", &dict->col_bounds.upper[i]);
 		else
-			fscanf(in, "%lf", &dict->var_bounds.upper[i]);
+			fscanf(in, "%lf", &dict->col_bounds.upper[i]);
 	}
 	fscanf(in, "\n");
 }

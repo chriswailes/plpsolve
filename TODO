@@ -1,8 +1,10 @@
 * Re-factor some of the code that is in dictionary.c.
 	* Re-do dict_resize to keep number of original vars in the dictionary.
-	* Change code to reference rows/columns & constraints/variables consistently.
+	* Clean up dict_init().
 	* Add a new array that holds values for the constraint rows.
+	* Re-evaluate the viable_t enum.
 
 * Numerical stability work.
 * Re-evaluate the way Bland's and Professor Y's rules are implemented/used.
 * Re-do some of the commented out debugging prints as very-verbose prints.
+* Add optimizations to the Makefile
