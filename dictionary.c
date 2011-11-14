@@ -139,16 +139,16 @@ double dict_get_var_value_by_label(const dict_t* dict, uint var_label) {
 	exit(-1);
 }
 
-void dict_init(dict_t* dict) {
-	int i, pre_resize_num_vars;
-	int old_num_vars, old_num_cons;
+bool dict_init(dict_t* dict) {
+	uint col_index, row_index, pre_resize_num_vars;
+	uint old_num_vars, old_num_cons;
 	double* old_objective;
-	uint num_unbounded_vars = dict_get_num_unbounded_vars(dict);
+	uint num_unbounded_vars;
 	
 	iset_t iset;
 	
-	dict_view(dict);
-
+	num_unbounded_vars = dict_get_num_unbounded_vars(dict);
+	
 	pre_resize_num_vars = dict->num_vars;
 	
 	dict_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
@@ -158,67 +158,58 @@ void dict_init(dict_t* dict) {
 	
 	if (!iset.num_rows) {
 		// Dictionary is feasible; return.
-		return;
+		return FALSE;
 	}
 	
 	// Perform initialization
 	old_objective	= dict->objective;
 	old_num_vars	= dict->num_vars;
 	old_num_cons	= dict->num_cons;
-
-	printf("Number infeasible rows: %i\n", iset.num_rows);
-	for (i = 0; i < iset.num_rows; ++i) {
-		printf("  row: %i by %f\n", iset.rows[i].row_index, iset.rows[i].amount);
-	}
 	
 	dict_resize(dict, dict->num_vars + iset.num_rows, dict->num_cons);
 
-	for (i = 0; i < old_num_vars; ++i) {
-		dict->objective[i] = 0;
+	for (col_index = 0; col_index < old_num_vars; ++col_index) {
+		dict->objective[col_index] = 0;
 	}
 	
-	for (i = 0; i < iset.num_rows; ++i) {
-		dict->objective[i + old_num_vars]			= -1;
-		dict->col_bounds.lower[i + old_num_vars]	= 0;
-		dict->col_labels[old_num_vars + i]			= 1 + i + (dict->num_vars - iset.num_rows) + dict->num_cons;
-		dict->var_rests[old_num_vars + i]			= UPPER;
+	for (row_index = 0; row_index < iset.num_rows; ++row_index) {
+		dict->objective[row_index + old_num_vars]			= -1;
+		dict->col_bounds.lower[row_index + old_num_vars]		= 0;
+		dict->col_labels[row_index + old_num_vars]			= 1 + row_index + (dict->num_vars - iset.num_rows) + dict->num_cons;
+		dict->var_rests[row_index + old_num_vars]			= UPPER;
 		
-		if (iset.rows[i].amount < 0) {
-			//FIXME: During shrinking this can segfault
-			dict->col_bounds.upper[old_num_vars + i] = -iset.rows[i].amount;
-			matrix_set_value(&dict->matrix, iset.rows[i].row_index, old_num_vars + i, -1);
+		if (iset.rows[row_index].amount < 0) {
+			// FIXME: During shrinking this can segfault
+			dict->col_bounds.upper[old_num_vars + row_index] = -iset.rows[row_index].amount;
+			matrix_set_value(&dict->matrix, iset.rows[row_index].row_index, old_num_vars + row_index, -1);
 			
 		} else {
-			dict->col_bounds.upper[old_num_vars + i] = iset.rows[i].amount;
-			matrix_set_value(&dict->matrix, iset.rows[i].row_index, old_num_vars + i, 1);
+			dict->col_bounds.upper[old_num_vars + row_index] = iset.rows[row_index].amount;
+			matrix_set_value(&dict->matrix, iset.rows[row_index].row_index, old_num_vars + row_index, 1);
 		}
 	}
 	
-	dict_view(dict);
 	general_simplex_kernel(dict);
-	printf("[[[[[After init pivot:]]]]]\n");
-	
-	dict_view(dict);
 	
 	dict_resize(dict, old_num_vars, old_num_cons);
 	memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
 	dict->objective = old_objective;
 	
-	for (i = 0; i < dict->num_vars; ++i) {
-		if (dict->col_labels[i] > (old_num_vars + old_num_cons)) {
-			dict->col_bounds.lower[i] = 0;
-			dict->col_bounds.upper[i] = 0;
-		}
-	}
-	for (i = 0; i < dict->num_cons; ++i) {
-		if (dict->row_labels[i] > (old_num_vars + old_num_cons)) {
-			dict->row_bounds.lower[i] = 0;
-			dict->row_bounds.upper[i] = 0;
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		if (dict->col_labels[col_index] > (old_num_vars + old_num_cons)) {
+			dict->col_bounds.lower[col_index] = 0;
+			dict->col_bounds.upper[col_index] = 0;
 		}
 	}
 	
-	printf("Resetting to original objective\n");
-	dict_view(dict);
+	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
+		if (dict->row_labels[row_index] > (old_num_vars + old_num_cons)) {
+			dict->row_bounds.lower[row_index] = 0;
+			dict->row_bounds.upper[row_index] = 0;
+		}
+	}
+	
+	return TRUE;
 }
 
 bool dict_is_final(const dict_t* dict) {
@@ -613,69 +604,57 @@ void dict_view(const dict_t* dict) {
 	uint col_index, row_index;
 	char buffer[10];
 	
-	printf("Objective coefficients:\n");
-	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		printf("%g  ", dict->objective[col_index]);
-	}
-	printf("\n\n");
-
-	printf("Matrix:\n     ");
+	// Print column labels.
+	printf("                        ");
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 		snprintf(buffer, 10, "x%d", dict->col_labels[col_index]);
-		printf("%5s", buffer);
+		printf("%8s", buffer);
 	}
-	printf("\n");
+	printf("     value\n");
 	
+	// Print bounds, labels, and values for rows.
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
-		printf("x%-4d", dict->row_labels[row_index]);
+		// Format the column label.
+		snprintf(buffer, 10, "x%d", dict->row_labels[row_index]);
+		
+		// Print out bounds and label info.
+		printf("% 7.3g % 7.3g | %4s |", dict->row_bounds.lower[row_index], dict->row_bounds.upper[row_index], buffer);
 		
 		for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-			printf("%5.3g", matrix_get_value(&dict->matrix, row_index, col_index));
+			printf(" % 7.3g", matrix_get_value(&dict->matrix, row_index, col_index));
 		}
+		
+		// Print the constraint's value.
+		printf(" | % 7.3g", dict_get_constraint_value(dict, row_index));
 		
 		printf("\n");
 	}
-	printf("\n\n");
-
-	printf("Constraint bounds:\n");
-	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
-		printf("(%4.3g, %4.3g) ", dict->row_bounds.lower[row_index], dict->row_bounds.upper[row_index]);
-	}
-	printf("\n\n");
-
-	printf("Variable bounds:\n");
+	
+	// Print seperator.
+	printf("----------------------------------");
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-
-		printf("(");
-		
-		if (dict->var_rests[col_index] == LOWER)
-			printf("[");
-			
-		printf("%4.3g", dict->col_bounds.lower[col_index]);
-		
-		if (dict->var_rests[col_index] == LOWER)
-			printf("]");
-		
-		printf(", ");
-		
-		if (dict->var_rests[col_index] == UPPER)
-			printf("[");
-		
-		printf("%4.3g", dict->col_bounds.upper[col_index]);
-		
-		if (dict->var_rests[col_index] == UPPER)
-			printf("]");
-		
-		printf(")");
+		printf("--------");
 	}
-
-	printf("\n\n");
-
-	printf("Split vars: ");
+	printf("\n");
+	
+	// Print objective function coefficients.
+	printf("                     z |");
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		if (dict->split_vars[col_index]) {
-			printf("x%i<->x%i ", col_index, dict->split_vars[col_index]);
-		}
+		printf(" % 7.3g", dict->objective[col_index]);
+	}
+	printf("\n");
+	
+	// Print the variables' upper bounds.
+	printf("                       | ");
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		printf(dict->var_rests[col_index] == UPPER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.upper[col_index]);
+	}
+	printf("\n");
+	
+	// Print the variables' lower bounds.
+	printf("                       | ");
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		printf(dict->var_rests[col_index] == LOWER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.lower[col_index]);
 	}
 	printf("\n\n");
 }

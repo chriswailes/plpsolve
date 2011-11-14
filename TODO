@@ -1,6 +1,4 @@
 * Re-factor some of the code that is in dictionary.c.
-	* Re-do dict_resize to keep number of original vars in the dictionary.
-	* Clean up dict_init().
 	* Add a new array that holds values for the constraint rows.
 	* Re-evaluate the viable_t enum.
 

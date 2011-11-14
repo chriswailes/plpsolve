@@ -40,11 +40,15 @@ int main(int argc, char** argv) {
 	}
 
 	if (cfg.verbose) {
+		printf("Initial Dictionary:\n");
 		dict_view(dict);
 	}
 
 	// Initialize the dictionary proper.
-	dict_init(dict);
+	if (dict_init(dict) && cfg.verbose) {
+		printf("Dictionary after initialization:\n");
+		dict_view(dict);
+	}
 	
 	switch (cfg.method) {
 		case GS:

@@ -91,7 +91,7 @@ iset_t	dict_get_infeasible_rows(const dict_t* dict);
 uint		dict_get_num_unbounded_vars(const dict_t* dict);
 double	dict_get_var_value_by_label(const dict_t* dict, uint var_label);
 double	dict_get_var_bound_value(const dict_t* dict, uint var_index);
-void		dict_init(dict_t* dict);
+bool		dict_init(dict_t* dict);
 bool		dict_is_final(const dict_t* dict);
 dict_t*	dict_new(uint num_vars, uint num_cons);
 void		dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest);

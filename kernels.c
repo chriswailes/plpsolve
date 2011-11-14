@@ -19,16 +19,10 @@ extern config_t cfg;
 // Functions
 
 void general_simplex_kernel(dict_t* dict) {
-	uint iters = 0;
+	unsigned int iters = 0;
 	elr_t el_result;
 	
-	//~printf("\n\n");
-	//~printf("START OF SIMPLEX!!!\n");
-	
-	//~while (!dictionary_is_final(dict)) {
-	while (iters < 8) {
-		//~printf("Iteration %d\n", iters);
-		
+	while (!dict_is_final(dict)) {
 		dict_select_entering_and_leaving(dict, &el_result);
 		
 		if (el_result.flip) {
@@ -37,8 +31,6 @@ void general_simplex_kernel(dict_t* dict) {
 		} else {
 			dict_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest);
 		}
-		
-		//~dict_view(dict);
 		
 		++iters;
 	}
