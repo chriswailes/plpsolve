@@ -155,6 +155,8 @@ bool dict_init(dict_t* dict) {
 	dict_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
 	dict_populate_split_vars(dict, pre_resize_num_vars);
 	
+	dict_set_bounds_and_values(dict);
+	
 	iset = dict_get_infeasible_rows(dict);
 	
 	if (!iset.num_rows) {
@@ -565,6 +567,25 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 		} else {
 			printf("\n\tPivot with x%u entering and x%u leaving.\n\n", dict->col_labels[result->entering], dict->row_labels[result->leaving]);
 		}
+	}
+}
+
+void dict_set_bounds_and_values(dict_t* dict) {
+	uint col_index, row_index;
+	
+	// Pick the initial resting bounds for the variables.
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		if ((dict->objective[col_index] >= 0 && dict->col_bounds.upper[col_index] < INFINITY) || (dict->col_bounds.lower[col_index] == -INFINITY)) {
+			dict->col_rests[col_index] = UPPER;
+			
+		} else {
+			dict->col_rests[col_index] = LOWER;
+		}
+	}
+	
+	// Calculate the initial values of the constraints.
+	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
+		dict->row_values[row_index] = dict_get_constraint_value(dict, row_index);
 	}
 }
 

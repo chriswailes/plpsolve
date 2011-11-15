@@ -95,6 +95,7 @@ void		dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest, 
 void		dict_populate_split_vars(dict_t* dict, uint starting_split_var);
 void		dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons);
 void		dict_select_entering_and_leaving(const dict_t* dict, elr_t* result);
+void		dict_set_bounds_and_values(dict_t* dict);
 bool		dict_var_can_enter(const dict_t* dict, uint var_index);
 void		dict_var_can_leave(const dict_t* dict, clr_t* result, uint var_index, uint con_index);
 bool		dict_var_is_unbounded(const dict_t* dict, uint var_index);
