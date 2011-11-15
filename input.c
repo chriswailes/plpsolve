@@ -21,7 +21,7 @@
 extern config_t cfg;
 
 dict_t* load_lp_file(void) {
-	int index;
+	uint col_index, row_index;
 	uint num_vars, num_cons;
 	FILE* in;
 	
@@ -34,12 +34,12 @@ dict_t* load_lp_file(void) {
 		dict = dict_new(num_vars, num_cons);
 		
 		// Set the variable labels.
-		for (index = 1; index <= num_vars; ++index) {
-			dict->col_labels[index - 1] = index;
+		for (col_index = 1; col_index <= num_vars; ++col_index) {
+			dict->col_labels[col_index - 1] = col_index;
 		}
 		
-		for (index = 1; index <= num_cons; ++index) {
-			dict->row_labels[index - 1] = num_vars + index;
+		for (row_index = 1; row_index <= num_cons; ++row_index) {
+			dict->row_labels[row_index - 1] = num_vars + row_index;
 		}
 		
 		// Load values from input file.
@@ -49,13 +49,18 @@ dict_t* load_lp_file(void) {
 		load_var_bounds(in, dict);
 		
 		// Pick the initial resting bounds for the variables.
-		for (index = 0; index < dict->num_vars; ++index) {
-			if ((dict->objective[index] >= 0 && dict->col_bounds.upper[index] < INFINITY) || (dict->col_bounds.lower[index] == -INFINITY)) {
-				dict->var_rests[index] = UPPER;
+		for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+			if ((dict->objective[col_index] >= 0 && dict->col_bounds.upper[col_index] < INFINITY) || (dict->col_bounds.lower[col_index] == -INFINITY)) {
+				dict->var_rests[col_index] = UPPER;
 				
 			} else {
-				dict->var_rests[index] = LOWER;
+				dict->var_rests[col_index] = LOWER;
 			}
+		}
+		
+		// Calculate the initial values of the constraints.
+		for (row_index = 0; row_index < dict->num_cons; ++row_index) {
+			dict->row_values[row_index] = dict_get_constraint_value(dict, row_index);
 		}
 
 		// Close the input file.

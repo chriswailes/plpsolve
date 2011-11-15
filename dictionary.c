@@ -27,6 +27,7 @@ extern config_t cfg;
 
 void dict_free(dict_t* dict) {
 	free(dict->objective);
+	free(dict->row_values);
 	
 	matrix_free(&dict->matrix);
 	
@@ -70,7 +71,7 @@ iset_t dict_get_infeasible_rows(const dict_t* dict) {
 	iset.num_rows	= 0;
 
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
-		con_val = dict_get_constraint_value(dict, row_index);
+		con_val = dict->row_values[row_index];
 		
 		if ((con_val < dict->row_bounds.lower[row_index]) || (con_val > dict->row_bounds.upper[row_index])) {
 
@@ -125,7 +126,7 @@ double dict_get_var_value_by_label(const dict_t* dict, uint var_label) {
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
 		if (dict->row_labels[row_index] == var_label) {
 
-			var_total = dict_get_constraint_value(dict, row_index);
+			var_total = dict->row_values[row_index];
 
 			if (dict->split_vars[var_label]) {
 				var_total -= dict_get_var_value_by_label(dict, dict->split_vars[var_label]);
@@ -236,7 +237,8 @@ dict_t* dict_new(uint num_vars, uint num_cons) {
 	// Initialize the matrix.
 	matrix_init(&dict->matrix, num_cons, num_vars);
 	
-	dict->objective = (double*)malloc(num_vars * sizeof(double));
+	dict->objective	= (double*)malloc(num_vars * sizeof(double));
+	dict->row_values	= (double*)malloc(num_cons * sizeof(double));
 	
 	dict->col_labels = (uint*)malloc(num_vars * sizeof(uint));
 	dict->row_labels = (uint*)malloc(num_cons * sizeof(uint));
@@ -274,7 +276,7 @@ dict_t* dict_new(uint num_vars, uint num_cons) {
  * Then to (3):
  * 	xn = (c1/-cj)*x1 + (c2/-cj)*x2 + (1/-cj)*xm + ... + (cn/-cj)*xn
  */
-void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest) {
+void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest, double adj_amount) {
 	uint row_index, col_index;
 	
 	double  coefficient, swap;
@@ -286,11 +288,14 @@ void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest) {
 	// Copy the pivot row.
 	memcpy(tmp_row, matrix_get_row(&dict->matrix, con_index), dict->num_vars * sizeof(double));
 	
-	// Grab the coefficient from the pivot column, and then replace it.
+	/* 
+	 * Grab the coefficient from the pivot column and then replace it,
+	 * converting to (2).
+	 */
 	coefficient = -tmp_row[var_index];
 	tmp_row[var_index] = -1.0;
 	
-	// Divide the vector by the coefficient, converting to form 3.
+	// Divide the vector by the coefficient, converting to (3).
 	for (row_index = 0; row_index < dict->num_vars; ++row_index) {
 		tmp_row[row_index] /= coefficient;
 	}
@@ -298,10 +303,18 @@ void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest) {
 	// Replace old row with new row.
 	memcpy(matrix_get_row(&dict->matrix, con_index), tmp_row, dict->num_vars * sizeof(double));
 	
-	// Substitute new rows into old rows in the matrix.
+	/* 
+	 * Update the constraint values and then substitute new rows into old rows
+	 * in the matrix.
+	 */
 	for (row_index = 0; row_index < dict->num_cons; ++row_index) {
-		if (row_index != con_index) {
+		if (row_index == con_index) {
+			dict->row_values[row_index] = dict_get_var_bound_value(dict, var_index) + adj_amount;
+			
+		} else {
 			coefficient = matrix_get_value(&dict->matrix, row_index, var_index);
+			
+			dict->row_values[row_index] += coefficient * adj_amount;
 			
 			for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 				if (col_index == var_index) {
@@ -341,9 +354,7 @@ void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest) {
 	dict->col_bounds.lower[var_index]	= dict->row_bounds.lower[con_index];
 	dict->row_bounds.lower[con_index]	= swap;
 	
-	/*
-	 * Set the new resting bound appropriately.
-	 */
+	// Set the new resting bound appropriately.
 	dict->var_rests[var_index] = new_rest;
 	
 	// Free our temporary row.
@@ -545,6 +556,9 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 		}
 	}
 	
+	// Set the adjustment amount to be used during pivoting.
+	result->adj_amount = dict->var_rests[result->entering] == UPPER ? -max_constraint : max_constraint;
+	
 	if (cfg.vv) {
 		if (result->flip) {
 			printf("\n\tFlip x%u\n\n", dict->col_labels[result->entering]);
@@ -589,7 +603,7 @@ void dict_var_can_leave(const dict_t* dict, clr_t* result, uint var_index, uint 
 	 * Accumulate the constant given the resting bounds for the non-basic
 	 * variables.
 	 */
-	accum = dict_get_constraint_value(dict, con_index);
+	accum = dict->row_values[con_index];
 	
 	// Get the coefficient for t.
 	t_coef  = dict->var_rests[var_index] == UPPER ? -1.0 : 1.0;
@@ -643,7 +657,7 @@ void dict_view(const dict_t* dict) {
 		}
 		
 		// Print the constraint's value.
-		printf(" | % 7.3g", dict_get_constraint_value(dict, row_index));
+		printf(" | % 7.3g", dict->row_values[row_index]);
 		
 		printf("\n");
 	}

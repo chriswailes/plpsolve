@@ -39,6 +39,8 @@ typedef struct {
 	uint entering;
 	uint leaving;
 	
+	double adj_amount;
+	
 	rest_t new_rest;
 	
 	bool flip;
@@ -63,6 +65,7 @@ typedef struct {
 	
 	double* objective;
 	matrix_t matrix;
+	double* row_values;
 	
 	// These labels correspond to non-basis variables.
 	uint* col_labels;
@@ -88,7 +91,7 @@ double	dict_get_var_bound_value(const dict_t* dict, uint var_index);
 bool		dict_init(dict_t* dict);
 bool		dict_is_final(const dict_t* dict);
 dict_t*	dict_new(uint num_vars, uint num_cons);
-void		dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest);
+void		dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest, double adj_amount);
 void		dict_populate_split_vars(dict_t* dict, uint starting_split_var);
 void		dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons);
 void		dict_select_entering_and_leaving(const dict_t* dict, elr_t* result);

@@ -1,6 +1,3 @@
-* Re-factor some of the code that is in dictionary.c.
-	* Add a new array that holds values for the constraint rows.
-
 * Numerical stability work.
 * Re-evaluate the way Bland's and Professor Y's rules are implemented/used.
 * Add optimizations to the Makefile
