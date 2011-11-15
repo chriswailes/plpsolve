@@ -12,6 +12,9 @@
 #define MAX(a,b) (a < b ? b : a)
 #define MIN(a,b) (a < b ? a : b)
 
+#define EPSILON 1e-5
+#define FPN_IS_ZERO(n) (-EPSILON < n && n < EPSILON)
+
 typedef enum {
 	FALSE = 0,
 	TRUE  = 1

@@ -593,7 +593,7 @@ void dict_set_bounds_and_values(dict_t* dict) {
  * Return should be Good, Bad, and Nope
  */
 bool dict_var_can_enter(const dict_t* dict, uint var_index) {
-	if ( (dict->objective[var_index] == 0) ||
+	if ( (FPN_IS_ZERO(dict->objective[var_index])) ||
 		(dict->objective[var_index] < 0 && dict->col_rests[var_index] == UPPER) ||
 		(dict->objective[var_index] > 0 && dict->col_rests[var_index] == LOWER)) {
 		
@@ -615,7 +615,7 @@ void dict_var_can_leave(const dict_t* dict, clr_t* result, uint var_index, uint 
 	double* row = matrix_get_row(&dict->matrix, con_index);
 	
 	// If the entering variable's coefficient is 0 this variable can't leave.
-	if (row[var_index] == 0) {
+	if (FPN_IS_ZERO(row[var_index])) {
 		result->viable = FALSE;
 		return;
 	}
