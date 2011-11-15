@@ -39,7 +39,7 @@ void dict_free(dict_t* dict) {
 	free(dict->col_bounds.upper);
 	free(dict->col_bounds.lower);
 	
-	free(dict->var_rests);
+	free(dict->col_rests);
 	
 	free(dict);
 }
@@ -103,7 +103,7 @@ uint dict_get_num_unbounded_vars(const dict_t* dict) {
 }
 
 inline double dict_get_var_bound_value(const dict_t* dict, uint var_index) {
-	return (dict->var_rests[var_index] == UPPER ? dict->col_bounds.upper : dict->col_bounds.lower)[var_index];
+	return (dict->col_rests[var_index] == UPPER ? dict->col_bounds.upper : dict->col_bounds.lower)[var_index];
 }
 
 double dict_get_var_value_by_label(const dict_t* dict, uint var_label) {
@@ -177,7 +177,7 @@ bool dict_init(dict_t* dict) {
 		dict->objective[row_index + old_num_vars]			= -1;
 		dict->col_bounds.lower[row_index + old_num_vars]		= 0;
 		dict->col_labels[row_index + old_num_vars]			= 1 + row_index + (dict->num_vars - iset.num_rows) + dict->num_cons;
-		dict->var_rests[row_index + old_num_vars]			= UPPER;
+		dict->col_rests[row_index + old_num_vars]			= UPPER;
 		
 		if (iset.rows[row_index].amount < 0) {
 			// FIXME: During shrinking this can segfault
@@ -217,7 +217,7 @@ bool dict_is_final(const dict_t* dict) {
 	uint col_index;
 	
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		if ((dict->objective[col_index] < 0 && dict->var_rests[col_index] == UPPER) || (dict->objective[col_index] > 0 && dict->var_rests[col_index] == LOWER)) {
+		if ((dict->objective[col_index] < 0 && dict->col_rests[col_index] == UPPER) || (dict->objective[col_index] > 0 && dict->col_rests[col_index] == LOWER)) {
 			return FALSE;
 		}
 	}
@@ -249,7 +249,7 @@ dict_t* dict_new(uint num_vars, uint num_cons) {
 	dict->col_bounds.upper = (double*)malloc(num_vars * sizeof(double));
 	dict->col_bounds.lower = (double*)malloc(num_vars * sizeof(double));
 	
-	dict->var_rests = (rest_t*)malloc(num_vars * sizeof(rest_t));
+	dict->col_rests = (rest_t*)malloc(num_vars * sizeof(rest_t));
 	
 	dict->split_vars = (uint*)malloc(num_vars * sizeof(uint));
 	memset(dict->split_vars, 0, num_vars * sizeof(uint));
@@ -355,7 +355,7 @@ void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest, d
 	dict->row_bounds.lower[con_index]	= swap;
 	
 	// Set the new resting bound appropriately.
-	dict->var_rests[var_index] = new_rest;
+	dict->col_rests[var_index] = new_rest;
 	
 	// Free our temporary row.
 	free(tmp_row);
@@ -385,8 +385,8 @@ void dict_populate_split_vars(dict_t* dict, uint starting_split_var) {
 			dict->col_bounds.upper[col_index] = INFINITY;
 			dict->col_bounds.lower[col_index] = 0;
 
-			dict->var_rests[next_split_var]	= LOWER;
-			dict->var_rests[col_index]		= LOWER;
+			dict->col_rests[next_split_var]	= LOWER;
+			dict->col_rests[col_index]		= LOWER;
 
 			dict->objective[next_split_var] = -dict->objective[col_index];
 
@@ -426,8 +426,8 @@ void dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons) {
 
 	new_var_rests = malloc(sizeof(rest_t) * new_num_vars);
 	memset(new_var_rests, 0, sizeof(rest_t) * new_num_vars);
-	memcpy(new_var_rests, dict->var_rests, sizeof(rest_t) * MIN(new_num_vars, dict->num_vars));
-	dict->var_rests = new_var_rests;
+	memcpy(new_var_rests, dict->col_rests, sizeof(rest_t) * MIN(new_num_vars, dict->num_vars));
+	dict->col_rests = new_var_rests;
 
 	new_split_vars = malloc(sizeof(uint) * new_num_vars);
 	memset(new_split_vars, 0, sizeof(uint) * new_num_vars);
@@ -512,7 +512,7 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 	/*
 	 * Pick the leaving variable.
 	 */
-	if (dict->objective[result->entering] < 0 && dict->var_rests[result->entering] == UPPER && dict->col_bounds.lower[result->entering] != -INFINITY) {
+	if (dict->objective[result->entering] < 0 && dict->col_rests[result->entering] == UPPER && dict->col_bounds.lower[result->entering] != -INFINITY) {
 		max_constraint = fabs(dict->col_bounds.upper[result->entering] - dict->col_bounds.lower[result->entering]);
 		
 		if (cfg.vv) printf("\tx%u can flip to its LOWER bound: t ≤ %- 7.3g\n\n", dict->col_labels[result->entering], max_constraint);
@@ -520,7 +520,7 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 		result->flip		= TRUE;
 		result->new_rest	= LOWER;
 		
-	} else if (dict->objective[result->entering] > 0 && dict->var_rests[result->entering] == LOWER && dict->col_bounds.upper[result->entering] != INFINITY) {
+	} else if (dict->objective[result->entering] > 0 && dict->col_rests[result->entering] == LOWER && dict->col_bounds.upper[result->entering] != INFINITY) {
 		max_constraint = fabs(dict->col_bounds.upper[result->entering] - dict->col_bounds.lower[result->entering]);
 		
 		if (cfg.vv) printf("\tx%u can flip to its UPPER bound: t ≤ %- 7.3g\n\n", dict->col_labels[result->entering], max_constraint);
@@ -557,7 +557,7 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 	}
 	
 	// Set the adjustment amount to be used during pivoting.
-	result->adj_amount = dict->var_rests[result->entering] == UPPER ? -max_constraint : max_constraint;
+	result->adj_amount = dict->col_rests[result->entering] == UPPER ? -max_constraint : max_constraint;
 	
 	if (cfg.vv) {
 		if (result->flip) {
@@ -573,8 +573,8 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
  */
 bool dict_var_can_enter(const dict_t* dict, uint var_index) {
 	if ( (dict->objective[var_index] == 0) ||
-		(dict->objective[var_index] < 0 && dict->var_rests[var_index] == UPPER) ||
-		(dict->objective[var_index] > 0 && dict->var_rests[var_index] == LOWER)) {
+		(dict->objective[var_index] < 0 && dict->col_rests[var_index] == UPPER) ||
+		(dict->objective[var_index] > 0 && dict->col_rests[var_index] == LOWER)) {
 		
 		return TRUE;
 		
@@ -606,7 +606,7 @@ void dict_var_can_leave(const dict_t* dict, clr_t* result, uint var_index, uint 
 	accum = dict->row_values[con_index];
 	
 	// Get the coefficient for t.
-	t_coef  = dict->var_rests[var_index] == UPPER ? -1.0 : 1.0;
+	t_coef  = dict->col_rests[var_index] == UPPER ? -1.0 : 1.0;
 	t_coef *= row[var_index];
 	
 	/*
@@ -679,14 +679,14 @@ void dict_view(const dict_t* dict) {
 	// Print the variables' upper bounds.
 	printf("                       | ");
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		printf(dict->var_rests[col_index] == UPPER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.upper[col_index]);
+		printf(dict->col_rests[col_index] == UPPER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.upper[col_index]);
 	}
 	printf("\n");
 	
 	// Print the variables' lower bounds.
 	printf("                       | ");
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		printf(dict->var_rests[col_index] == LOWER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.lower[col_index]);
+		printf(dict->col_rests[col_index] == LOWER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.lower[col_index]);
 	}
 	printf("\n\n");
 }

@@ -51,10 +51,10 @@ dict_t* load_lp_file(void) {
 		// Pick the initial resting bounds for the variables.
 		for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 			if ((dict->objective[col_index] >= 0 && dict->col_bounds.upper[col_index] < INFINITY) || (dict->col_bounds.lower[col_index] == -INFINITY)) {
-				dict->var_rests[col_index] = UPPER;
+				dict->col_rests[col_index] = UPPER;
 				
 			} else {
-				dict->var_rests[col_index] = LOWER;
+				dict->col_rests[col_index] = LOWER;
 			}
 		}
 		

@@ -36,7 +36,7 @@ void general_simplex_kernel(dict_t* dict) {
 		dict_select_entering_and_leaving(dict, &el_result);
 		
 		if (el_result.flip) {
-			dict->var_rests[el_result.entering] = el_result.new_rest;
+			dict->col_rests[el_result.entering] = el_result.new_rest;
 			
 		} else {
 			dict_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest, el_result.adj_amount);

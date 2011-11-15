@@ -79,7 +79,7 @@ typedef struct {
 	bounds_t row_bounds;
 	bounds_t col_bounds;
 	
-	rest_t* var_rests;
+	rest_t* col_rests;
 } dict_t;
 
 void		dict_free(dict_t* dict);
