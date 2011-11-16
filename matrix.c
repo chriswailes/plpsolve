@@ -14,7 +14,7 @@
 #include "matrix.h"
 #include "util.h"
 
-inline double matrix_accum_value(matrix_t* m, uint row_index, uint col_index, double val) {
+inline double matrix_accum_value(matrix_t* m, unsigned row_index, unsigned col_index, double val) {
 	return m->values[row_index*m->num_cols + col_index] += val;
 }
 
@@ -22,19 +22,19 @@ void matrix_free(matrix_t* m) {
 	free(m->values);
 }
 
-inline double* matrix_get_address(const matrix_t* m, uint row_index, uint col_index) {
+inline double* matrix_get_address(const matrix_t* m, unsigned row_index, unsigned col_index) {
 	return &m->values[row_index*m->num_cols + col_index];
 }
 
-inline double* matrix_get_row(const matrix_t* m, uint row_index) {
+inline double* matrix_get_row(const matrix_t* m, unsigned row_index) {
 	return &m->values[row_index * m->num_cols];
 }
 
-inline double matrix_get_value(const matrix_t* m, uint row_index, uint col_index) {
+inline double matrix_get_value(const matrix_t* m, unsigned row_index, unsigned col_index) {
 	return m->values[row_index*m->num_cols + col_index];
 }
 
-void matrix_init(matrix_t* m, uint num_rows, uint num_cols) {
+void matrix_init(matrix_t* m, unsigned num_rows, unsigned num_cols) {
 	// Set the number of rows and columns.
 	m->num_rows = num_rows;
 	m->num_cols = num_cols;
@@ -46,8 +46,8 @@ void matrix_init(matrix_t* m, uint num_rows, uint num_cols) {
 	memset(m->values, 0, num_rows * num_cols * sizeof(double));
 }
 
-void matrix_resize(matrix_t* m, uint new_rows, uint new_cols) {
-	uint row_index, col_index;
+void matrix_resize(matrix_t* m, unsigned new_rows, unsigned new_cols) {
+	unsigned row_index, col_index;
 	double* new_v;
 	
 	if (m->num_rows == new_rows && m->num_cols == new_cols) {
@@ -73,6 +73,6 @@ void matrix_resize(matrix_t* m, uint new_rows, uint new_cols) {
 	m->num_cols	= new_cols;
 }
 
-inline double matrix_set_value(matrix_t* m, uint row_index, uint col_index, double val) {
+inline double matrix_set_value(matrix_t* m, unsigned row_index, unsigned col_index, double val) {
 	return m->values[row_index*m->num_cols + col_index] = val;
 }

@@ -604,7 +604,7 @@ void dict_set_bounds_and_values(dict_t* dict) {
  * Return should be Good, Bad, and Nope
  */
 bool dict_var_can_enter(const dict_t* dict, uint var_index) {
-	if ( (FPN_IS_ZERO(dict->objective[var_index])) ||
+	if ( //(FPN_IS_ZERO(dict->objective[var_index])) ||
 		(dict->objective[var_index] < 0 && dict->col_rests[var_index] == UPPER) ||
 		(dict->objective[var_index] > 0 && dict->col_rests[var_index] == LOWER)) {
 		
@@ -708,17 +708,17 @@ void dict_view(const dict_t* dict) {
 	}
 	printf("\n");
 	
-	// Print the variables' upper bounds.
-	printf("                       | ");
-	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		printf(dict->col_rests[col_index] == UPPER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.upper[col_index]);
-	}
-	printf("\n");
-	
 	// Print the variables' lower bounds.
 	printf("                       | ");
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 		printf(dict->col_rests[col_index] == LOWER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.lower[col_index]);
+	}
+	printf("\n");
+	
+	// Print the variables' upper bounds.
+	printf("                       | ");
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		printf(dict->col_rests[col_index] == UPPER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.upper[col_index]);
 	}
 	printf("\n\n");
 }
