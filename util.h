@@ -31,18 +31,16 @@ typedef enum {
 	GPU
 } pmode_t;
 
-typedef enum {
-	NO = 0,
-	BLANDS,
-	PROFY
-} rule_t;
-
 typedef struct {
 	char* filename;
 	
 	method_t method;
 	pmode_t pmode;
-	rule_t rule;
+	
+	bool blands;
+	bool profys;
+	
+	uint simplex_limit;
 	
 	bool verbose;
 	bool vv;

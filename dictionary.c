@@ -141,7 +141,7 @@ double dict_get_var_value_by_label(const dict_t* dict, uint var_label) {
 }
 
 bool dict_init(dict_t* dict) {
-	uint col_index, row_index, pre_resize_num_vars;
+	uint col_index, row_index, set_index, pre_resize_num_vars;
 	uint old_num_vars, old_num_cons;
 	double* old_objective;
 	uint num_unbounded_vars;
@@ -155,14 +155,16 @@ bool dict_init(dict_t* dict) {
 	dict_resize(dict, dict->num_vars + num_unbounded_vars, dict->num_cons);
 	dict_populate_split_vars(dict, pre_resize_num_vars);
 	
-	dict_set_bounds_and_values(dict);
-	
 	iset = dict_get_infeasible_rows(dict);
 	
 	if (!iset.num_rows) {
 		// Dictionary is feasible; return.
 		return FALSE;
 	}
+	
+	if (cfg.vv) printf("Start of Initialization:\n\n");
+	
+	dict_set_bounds_and_values(dict);
 	
 	// Perform initialization
 	old_objective	= dict->objective;
@@ -175,21 +177,24 @@ bool dict_init(dict_t* dict) {
 		dict->objective[col_index] = 0;
 	}
 	
-	for (row_index = 0; row_index < iset.num_rows; ++row_index) {
-		dict->objective[row_index + old_num_vars]			= -1;
-		dict->col_bounds.lower[row_index + old_num_vars]		= 0;
-		dict->col_labels[row_index + old_num_vars]			= 1 + row_index + (dict->num_vars - iset.num_rows) + dict->num_cons;
-		dict->col_rests[row_index + old_num_vars]			= UPPER;
+	for (set_index = 0; set_index < iset.num_rows; ++set_index) {
+		dict->objective[set_index + old_num_vars]			= -1;
+		dict->col_bounds.lower[set_index + old_num_vars]		= 0;
+		dict->col_labels[set_index + old_num_vars]			= 1 + set_index + (dict->num_vars - iset.num_rows) + dict->num_cons;
+		dict->col_rests[set_index + old_num_vars]			= UPPER;
 		
-		if (iset.rows[row_index].amount < 0) {
+		if (iset.rows[set_index].amount < 0) {
 			// FIXME: During shrinking this can segfault
-			dict->col_bounds.upper[old_num_vars + row_index] = -iset.rows[row_index].amount;
-			matrix_set_value(&dict->matrix, iset.rows[row_index].row_index, old_num_vars + row_index, -1);
+			dict->col_bounds.upper[old_num_vars + set_index] = -iset.rows[set_index].amount;
+			matrix_set_value(&dict->matrix, iset.rows[set_index].row_index, old_num_vars + set_index, -1);
 			
 		} else {
-			dict->col_bounds.upper[old_num_vars + row_index] = iset.rows[row_index].amount;
-			matrix_set_value(&dict->matrix, iset.rows[row_index].row_index, old_num_vars + row_index, 1);
+			dict->col_bounds.upper[old_num_vars + set_index] = iset.rows[set_index].amount;
+			matrix_set_value(&dict->matrix, iset.rows[set_index].row_index, old_num_vars + set_index, 1);
 		}
+		
+		// Adjust the row value.
+		dict->row_values[iset.rows[set_index].row_index] += dict->col_bounds.upper[old_num_vars + set_index] * matrix_get_value(&dict->matrix, iset.rows[set_index].row_index, old_num_vars + set_index);
 	}
 	
 	general_simplex_kernel(dict);
@@ -211,6 +216,8 @@ bool dict_init(dict_t* dict) {
 			dict->row_bounds.upper[row_index] = 0;
 		}
 	}
+	
+	dict_set_bounds_and_values(dict);
 	
 	return TRUE;
 }
@@ -325,6 +332,8 @@ void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest, d
 				} else {
 					matrix_accum_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
 				}
+				
+				if (FPN_IS_ZERO(matrix_get_value(&dict->matrix, row_index, col_index))) matrix_set_value(&dict->matrix, row_index, col_index, 0.0);
 			}
 		}
 	}
@@ -461,6 +470,8 @@ void dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons) {
 	memcpy(new_con_bounds.upper, dict->row_bounds.upper, sizeof(double) * MIN(new_num_cons, dict->num_cons));
 	dict->row_bounds = new_con_bounds;
 	
+	dict->row_values = realloc(dict->row_values, new_num_cons * sizeof(double));
+	
 	matrix_resize(&dict->matrix, new_num_cons, new_num_vars);
 
 	dict->num_cons = new_num_cons;
@@ -491,7 +502,7 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 				printf("\tx%u can enter.\n", dict->col_labels[col_index]);
 			}
 			
-			if (cfg.rule == BLANDS) {
+			if (cfg.blands) {
 				if (dict->col_labels[col_index] < min_sub) {
 					if (cfg.vv) printf("\tSelecting x%u as entering variable due to Bland's Rule\n", dict->col_labels[col_index]);
 					
@@ -544,7 +555,7 @@ void dict_select_entering_and_leaving(const dict_t* dict, elr_t* result) {
 			
 			// Found a new, more constraining, choice.
 			if (cl_result.constraint < max_constraint ||
-				(cfg.rule == BLANDS && (cl_result.constraint == max_constraint && dict->row_labels[row_index] < min_sub))) {
+				(cfg.blands && (cl_result.constraint == max_constraint && dict->row_labels[row_index] < min_sub))) {
 				
 				if (cfg.vv) printf("\tSelecting x%u as leaving variable.\n", dict->row_labels[row_index]);
 				

@@ -26,7 +26,7 @@ void general_simplex_kernel(dict_t* dict) {
 		printf("\t** START OF SIMPLEX **\n\n");
 	}
 	
-	while (!dict_is_final(dict)) {
+	while (!dict_is_final(dict) && (!cfg.simplex_limit || iters < cfg.simplex_limit)) {
 		
 		if (cfg.vv) {
 			printf("Simplex Iteration %u:\n\n", iters);	

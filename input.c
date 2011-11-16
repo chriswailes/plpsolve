@@ -47,6 +47,8 @@ dict_t* load_lp_file(void) {
 		load_matrix(in, dict);
 		load_constraint_bounds(in, dict);
 		load_var_bounds(in, dict);
+	
+		dict_set_bounds_and_values(dict);
 
 		// Close the input file.
 		fclose(in);

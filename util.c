@@ -65,19 +65,24 @@ void get_config(int argc, char** argv) {
 			
 			++index;
 			
+		} else if (check_option(argv[index], "--limit", "-l")) {
+			cfg.simplex_limit = atoi(argv[++index]);
+			
 		} else if (check_option(argv[index], "--mathprog", "-m")) {
 			cfg.mathprog_filename = argv[index + 1];
 			++index;
 			
 		} else if (check_option(argv[index], "--rule", "-r")) {
-			if (!strcmp(argv[index + 1], "blands")) {
-				cfg.rule = BLANDS;
+			if (!strcmp(argv[++index], "blands")) {
+				cfg.blands = TRUE;
 				
-			} else if (!strcmp(argv[index + 1], "profy")) {
-				cfg.rule = PROFY;
+			} else if (!strcmp(argv[index], "profys")) {
+				cfg.profys = TRUE;
+				
+			} else if (!strcmp(argv[index], "none")) {
+				cfg.profys = FALSE;
 			}
 			
-			++index;
 		} else if (check_option(argv[index], "--very-verbose", "-vv")) {
 			cfg.verbose = cfg.vv = TRUE;
 			
@@ -98,12 +103,14 @@ static inline bool check_option(char* opt, char* lng, char* srt) {
 }
 
 static inline void init_config(void) {
-	cfg.mathprog_filename = 0;
-	cfg.method	= GS;
-	cfg.pmode		= NONE;
-	cfg.rule		= NO;
-	cfg.verbose	= FALSE;
-	cfg.vv		= FALSE;
+	cfg.mathprog_filename	= 0;
+	cfg.method			= GS;
+	cfg.pmode				= NONE;
+	cfg.blands			= FALSE;
+	cfg.profys			= TRUE;
+	cfg.simplex_limit		= 0;
+	cfg.verbose			= FALSE;
+	cfg.vv				= FALSE;
 }
 
 static inline void print_help(void) {
@@ -113,6 +120,7 @@ static inline void print_help(void) {
 	//Help for Project options.
 	print_help_item("parallel", "p", "Specifies parallelism mode.  Must be mp, pthreads, gpu, or none.");
 	print_help_item("rule", "r", "Specifies the termination rule to use.  Choices are: none, blands, or profy.  Default is none.");
+	print_help_item("limit", "l", "Set the maximum number of iterations to perform during simplex.");
 	
 	// Help for Debug outputs.
 	print_help_item("mathprog", "m", "Outputs mathprog compatible file.  Must specify filename.");

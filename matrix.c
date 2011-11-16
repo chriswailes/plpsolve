@@ -47,7 +47,7 @@ void matrix_init(matrix_t* m, uint num_rows, uint num_cols) {
 }
 
 void matrix_resize(matrix_t* m, uint new_rows, uint new_cols) {
-	uint r_index, c_index;
+	uint row_index, col_index;
 	double* new_v;
 	
 	if (m->num_rows == new_rows && m->num_cols == new_cols) {
@@ -60,11 +60,17 @@ void matrix_resize(matrix_t* m, uint new_rows, uint new_cols) {
 	memset(new_v, 0, new_rows * new_cols * sizeof(double));
 	
 	// Copy the old values over.
-	for (r_index = 0; r_index < MIN(new_rows, m->num_rows); ++r_index) {
-		for (c_index = 0; c_index < MIN(new_cols, m->num_cols); ++ c_index) {
-			new_v[r_index*new_cols + c_index] = matrix_get_value(m, r_index, c_index);
+	for (row_index = 0; row_index < MIN(new_rows, m->num_rows); ++row_index) {
+		for (col_index = 0; col_index < MIN(new_cols, m->num_cols); ++ col_index) {
+			new_v[row_index*new_cols + col_index] = matrix_get_value(m, row_index, col_index);
 		}
 	}
+	
+	free(m->values);
+	
+	m->values		= new_v;
+	m->num_rows	= new_rows;
+	m->num_cols	= new_cols;
 }
 
 inline double matrix_set_value(matrix_t* m, uint row_index, uint col_index, double val) {
