@@ -143,7 +143,7 @@ double dict_get_var_value_by_label(const dict_t* dict, uint var_label) {
 bool dict_init(dict_t* dict) {
 	uint col_index, row_index, set_index, pre_resize_num_vars;
 	uint old_num_vars, old_num_cons;
-	double* old_objective;
+	double* old_objective, *new_objective;
 	uint num_unbounded_vars;
 	
 	iset_t iset;
@@ -172,6 +172,8 @@ bool dict_init(dict_t* dict) {
 	old_num_cons	= dict->num_cons;
 	
 	dict_resize(dict, dict->num_vars + iset.num_rows, dict->num_cons);
+
+	new_objective = (double *)malloc(sizeof(double) * dict->num_vars);
 
 	for (col_index = 0; col_index < old_num_vars; ++col_index) {
 		dict->objective[col_index] = 0;
@@ -207,8 +209,32 @@ bool dict_init(dict_t* dict) {
 		dict_view(dict);
 	}
 	
-	memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
-	dict->objective = old_objective;
+	//memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
+
+	//Let's build our new objective
+	//First, let's initialize our objective to zero
+	memset(new_objective, 0, sizeof(double) * dict->num_vars);
+
+	//Then, let's gather up the new objective
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		//If it's an original independent var, just add it in
+		if (dict->col_labels[col_index] <= old_num_vars) {
+			new_objective[col_index] += old_objective[dict->col_labels[col_index]];
+		}
+	}
+
+	//Next, look in the basis and find the original independent vars and sum their
+	//contributions
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		for (row_index = 0; row_index < dict->num_cons; ++row_index) {
+			if (dict->row_labels[row_index] <= old_num_vars) {
+				new_objective[col_index] += old_objective[dict->row_labels[row_index]] *
+						matrix_get_value(&dict->matrix, row_index, col_index);
+			}
+		}
+	}
+
+	dict->objective = new_objective;
 	
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 		if (dict->col_labels[col_index] > (old_num_vars + old_num_cons)) {
