@@ -162,7 +162,7 @@ bool dict_init(dict_t* dict) {
 		return FALSE;
 	}
 	
-	if (cfg.vv) printf("Start of Initialization:\n\n");
+	if (cfg.vv) printf("\t** START OF INITIALIZATION **\n\n");
 	
 	dict_set_bounds_and_values(dict);
 	
@@ -194,10 +194,16 @@ bool dict_init(dict_t* dict) {
 		}
 		
 		// Adjust the row value.
-		dict->row_values[iset.rows[set_index].row_index] += dict->col_bounds.upper[old_num_vars + set_index] * matrix_get_value(&dict->matrix, iset.rows[set_index].row_index, old_num_vars + set_index);
+		dict->row_values[iset.rows[set_index].row_index] +=
+			dict->col_bounds.upper[old_num_vars + set_index] * matrix_get_value(&dict->matrix, iset.rows[set_index].row_index, old_num_vars + set_index);
 	}
 	
 	general_simplex_kernel(dict);
+	
+	if (cfg.vv) {
+		printf("Dictionary before removing initialization variables:\n");
+		dict_view(dict);
+	}
 	
 	dict_resize(dict, old_num_vars, old_num_cons);
 	memcpy(dict->objective, old_objective, sizeof(*dict->objective) * old_num_vars);
@@ -218,6 +224,8 @@ bool dict_init(dict_t* dict) {
 	}
 	
 	dict_set_bounds_and_values(dict);
+	
+	if (cfg.vv) printf("\t** END OF INITIALIZATION **\n\n");
 	
 	return TRUE;
 }
@@ -336,6 +344,8 @@ void dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest, d
 				if (FPN_IS_ZERO(matrix_get_value(&dict->matrix, row_index, col_index))) matrix_set_value(&dict->matrix, row_index, col_index, 0.0);
 			}
 		}
+		
+		if (FPN_IS_ZERO(dict->row_values[row_index])) dict->row_values[row_index] = 0.0;
 	}
 	
 	// Perform the same steps for the objective function.
@@ -586,7 +596,7 @@ void dict_set_bounds_and_values(dict_t* dict) {
 	
 	// Pick the initial resting bounds for the variables.
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		if ((dict->objective[col_index] >= 0 && dict->col_bounds.upper[col_index] < INFINITY) || (dict->col_bounds.lower[col_index] == -INFINITY)) {
+		if ((dict->objective[col_index] >= 0 && dict->col_bounds.upper[col_index] != INFINITY) || (dict->col_bounds.lower[col_index] == -INFINITY)) {
 			dict->col_rests[col_index] = UPPER;
 			
 		} else {
@@ -604,8 +614,7 @@ void dict_set_bounds_and_values(dict_t* dict) {
  * Return should be Good, Bad, and Nope
  */
 bool dict_var_can_enter(const dict_t* dict, uint var_index) {
-	if ( //(FPN_IS_ZERO(dict->objective[var_index])) ||
-		(dict->objective[var_index] < 0 && dict->col_rests[var_index] == UPPER) ||
+	if ( (dict->objective[var_index] < 0 && dict->col_rests[var_index] == UPPER) ||
 		(dict->objective[var_index] > 0 && dict->col_rests[var_index] == LOWER)) {
 		
 		return TRUE;
@@ -708,17 +717,17 @@ void dict_view(const dict_t* dict) {
 	}
 	printf("\n");
 	
-	// Print the variables' lower bounds.
-	printf("                       | ");
-	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
-		printf(dict->col_rests[col_index] == LOWER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.lower[col_index]);
-	}
-	printf("\n");
-	
 	// Print the variables' upper bounds.
 	printf("                       | ");
 	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 		printf(dict->col_rests[col_index] == UPPER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.upper[col_index]);
+	}
+	printf("\n");
+	
+	// Print the variables' lower bounds.
+	printf("                       | ");
+	for (col_index = 0; col_index < dict->num_vars; ++col_index) {
+		printf(dict->col_rests[col_index] == LOWER ? " [% 5.2g]" : "  % 5.2g ", dict->col_bounds.lower[col_index]);
 	}
 	printf("\n\n");
 }

@@ -85,9 +85,9 @@ typedef struct {
 void		dict_free(dict_t* dict);
 double	dict_get_constraint_value(const dict_t* dict, uint con_index);
 iset_t	dict_get_infeasible_rows(const dict_t* dict);
-unsigned		dict_get_num_unbounded_vars(const dict_t* dict);
+uint		dict_get_num_unbounded_vars(const dict_t* dict);
 double	dict_get_var_value_by_label(const dict_t* dict, uint var_label);
-inline double	dict_get_var_bound_value(const dict_t* dict, uint var_index);
+double	dict_get_var_bound_value(const dict_t* dict, uint var_index);
 bool		dict_init(dict_t* dict);
 bool		dict_is_final(const dict_t* dict);
 dict_t*	dict_new(uint num_vars, uint num_cons);
@@ -98,7 +98,7 @@ void		dict_select_entering_and_leaving(const dict_t* dict, elr_t* result);
 void		dict_set_bounds_and_values(dict_t* dict);
 bool		dict_var_can_enter(const dict_t* dict, uint var_index);
 void		dict_var_can_leave(const dict_t* dict, clr_t* result, uint var_index, uint con_index);
-inline bool		dict_var_is_unbounded(const dict_t* dict, uint var_index);
+bool		dict_var_is_unbounded(const dict_t* dict, uint var_index);
 void		dict_view(const dict_t* dict);
 void		dict_view_answer(const dict_t* dict, uint num_orig_vars);
 
