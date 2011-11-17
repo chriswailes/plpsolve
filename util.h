@@ -15,6 +15,8 @@
 #define EPSILON 1e-5
 #define FPN_IS_ZERO(n) (-EPSILON < n && n < EPSILON)
 
+#include <sys/types.h>
+
 typedef enum {
 	FALSE = 0,
 	TRUE  = 1
