@@ -40,7 +40,7 @@ typedef struct {
 	bool blands;
 	bool profys;
 	
-	unsigned simplex_limit;
+	uint simplex_limit;
 	
 	bool verbose;
 	bool vv;

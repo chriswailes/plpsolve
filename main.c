@@ -26,7 +26,7 @@ config_t cfg;
 
 int main(int argc, char** argv) {
 	dict_t* dict;
-	unsigned int num_orig_vars;
+	uint num_orig_vars;
 
 	get_config(argc, argv);
 	

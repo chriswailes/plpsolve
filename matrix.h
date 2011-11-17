@@ -9,20 +9,22 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include <sys/types.h>
+
 typedef struct {
-	unsigned num_rows;
-	unsigned num_cols;
+	uint num_rows;
+	uint num_cols;
 	
 	double* values;
 } matrix_t;
 
-double	matrix_accum_value(matrix_t* m, unsigned row_index, unsigned col_index, double val);
-void		matrix_free(matrix_t* m);
-double*	matrix_get_address(const matrix_t* m, unsigned row_index, unsigned col_index);
-double*	matrix_get_row(const matrix_t* m, unsigned row_index);
-double	matrix_get_value(const matrix_t* m, unsigned row, unsigned col);
-void		matrix_init(matrix_t* m, unsigned num_rows, unsigned num_cols);
-void		matrix_resize(matrix_t* m, unsigned new_rows, unsigned new_cols);
-double	matrix_set_value(matrix_t* m, unsigned row_index, unsigned col_index, double val);
+inline	double	matrix_accum_value(matrix_t* m, uint row_index, uint col_index, double val);
+		void		matrix_free(matrix_t* m);
+inline	double*	matrix_get_address(const matrix_t* m, uint row_index, uint col_index);
+inline	double*	matrix_get_row(const matrix_t* m, uint row_index);
+inline	double	matrix_get_value(const matrix_t* m, uint row, uint col);
+		void		matrix_init(matrix_t* m, uint num_rows, uint num_cols);
+		void		matrix_resize(matrix_t* m, uint new_rows, uint new_cols);
+inline	double	matrix_set_value(matrix_t* m, uint row_index, uint col_index, double val);
 
 #endif
