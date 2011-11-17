@@ -177,6 +177,8 @@ bool dict_init(dict_t* dict) {
 		dict->objective[col_index] = 0;
 	}
 	
+	printf("There are %u infeasible rows.\n", iset.num_rows);
+	
 	for (set_index = 0; set_index < iset.num_rows; ++set_index) {
 		dict->objective[set_index + old_num_vars]			= -1;
 		dict->col_bounds.lower[set_index + old_num_vars]		= 0;
