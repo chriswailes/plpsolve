@@ -293,10 +293,10 @@ dict_t* dict_new(uint num_vars, uint num_cons) {
 	
 	dict->col_rests = (rest_t*)malloc(num_vars * sizeof(rest_t));
 	
-	dict->split_vars = (uint*)malloc(num_vars * sizeof(uint));
-	memset(dict->split_vars, 0, num_vars * sizeof(uint));
+	dict->split_vars = (uint*)malloc((num_vars+1) * sizeof(uint));
+	memset(dict->split_vars, 0, (num_vars+1) * sizeof(uint));
 	
-	// Set the number of variables and constrants for the dictionary.
+	// Set the number of variables and constraints for the dictionary.
 	dict->num_vars = num_vars;
 	dict->num_cons = num_cons;
 	
@@ -475,9 +475,9 @@ void dict_resize(dict_t* dict, uint new_num_vars, uint new_num_cons) {
 	memcpy(new_var_rests, dict->col_rests, sizeof(rest_t) * MIN(new_num_vars, dict->num_vars));
 	dict->col_rests = new_var_rests;
 
-	new_split_vars = malloc(sizeof(uint) * new_num_vars);
-	memset(new_split_vars, 0, sizeof(uint) * new_num_vars);
-	memcpy(new_split_vars, dict->split_vars, sizeof(uint) * MIN(new_num_vars, dict->num_vars));
+	new_split_vars = malloc(sizeof(uint) * (new_num_vars + 1));
+	memset(new_split_vars, 0, sizeof(uint) * (new_num_vars + 1));
+	memcpy(new_split_vars, dict->split_vars, sizeof(uint) * (MIN(new_num_vars, dict->num_vars) + 1));
 	dict->split_vars = new_split_vars;
 	
 	new_var_bounds.lower = malloc(sizeof(double) * new_num_vars);
