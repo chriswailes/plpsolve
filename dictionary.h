@@ -63,9 +63,10 @@ typedef struct {
 typedef struct {
 	uint num_vars, num_cons;
 	
-	double* objective;
-	matrix_t matrix;
-	double* row_values;
+	double*	objective;
+	double	objective_value;
+	matrix_t	matrix;
+	double*	row_values;
 	
 	// These labels correspond to non-basis variables.
 	uint* col_labels;
@@ -82,6 +83,7 @@ typedef struct {
 	rest_t* col_rests;
 } dict_t;
 
+		void		dict_flip_rest(dict_t* dict, uint var_index, rest_t new_rest);
 		void		dict_free(dict_t* dict);
 		double	dict_get_constraint_value(const dict_t* dict, uint con_index);
 		iset_t	dict_get_infeasible_rows(const dict_t* dict);

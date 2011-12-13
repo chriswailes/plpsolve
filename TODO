@@ -1,3 +1,8 @@
-* Numerical stability work.
-* Re-evaluate the way Bland's and Professor Y's rules are implemented/used.
+* Convert loops to more efficient form.
+* Fix initialization?
+* OpenMP
+* pthreads based parallelization
+* Verbose output file
+* Different input formats
+* Different output formats
 * Add optimizations to the Makefile

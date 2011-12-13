@@ -20,11 +20,15 @@ extern config_t cfg;
 
 void general_simplex_kernel(dict_t* dict) {
 	uint iters = 0;
+	uint unprogress = 0;
+	double prev_objective;
 	elr_t el_result;
 	
 	if (cfg.vv) {
 		printf("\t** START OF SIMPLEX **\n\n");
 	}
+	
+	prev_objective = dict->objective_value;
 	
 	while (!dict_is_final(dict) && (!cfg.simplex_limit || iters < cfg.simplex_limit)) {
 		
@@ -36,10 +40,25 @@ void general_simplex_kernel(dict_t* dict) {
 		dict_select_entering_and_leaving(dict, &el_result);
 		
 		if (el_result.flip) {
-			dict->col_rests[el_result.entering] = el_result.new_rest;
+			dict_flip_rest(dict, el_result.entering, el_result.new_rest);
 			
 		} else {
 			dict_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest, el_result.adj_amount);
+		}
+		
+		if (cfg.profys) {
+			if (prev_objective == dict->objective_value) {
+				if (++unprogress == PROF_Y_THRESHOLD) {
+					cfg.blands = TRUE;
+					
+				}
+				
+			} else {
+				cfg.blands = FALSE;
+				unprogress = 0;
+			}
+			
+			prev_objective = dict->objective_value;
 		}
 		
 		++iters;
