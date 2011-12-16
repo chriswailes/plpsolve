@@ -26,13 +26,10 @@ config_t cfg;
 
 int main(int argc, char** argv) {
 	dict_t* dict;
-	uint num_orig_vars;
-
+	
 	get_config(argc, argv);
 	
 	dict = load_lp_file();
-	
-	num_orig_vars = dict->num_vars;
 	
 	if (cfg.mathprog_filename) {
 		output_glpsol(dict, cfg.mathprog_filename);
@@ -45,15 +42,21 @@ int main(int argc, char** argv) {
 	}
 
 	// Initialize the dictionary proper.
-	if (dict_init(dict) && cfg.verbose) {
-		printf("Dictionary after initialization:\n");
-		dict_view(dict);
+	if (dict_init(&dict)) {
+		printf("Dictionary required initialization.\n");
+		
+		if (cfg.verbose) {
+			printf("Dictionary after initialization:\n");
+			dict_view(dict);
+		}
 	}
+	
+	cfg.init_done = TRUE;
 	
 	switch (cfg.method) {
 		case GS:
 		default:
-			general_simplex_kernel(dict);
+			dict = general_simplex_kernel(dict);
 			break;
 	}
 	
@@ -63,7 +66,7 @@ int main(int argc, char** argv) {
 	}
 	
 	printf("Final Values:\n");
-	dict_view_answer(dict, num_orig_vars);
+	dict_view_answer(dict);
 	printf("\n");
 	
 	dict_free(dict);

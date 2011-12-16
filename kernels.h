@@ -9,8 +9,10 @@
 #ifndef KERNELS_H
 #define KERNELS_H
 
+#include "dictionary.h"
+
 #define PROF_Y_THRESHOLD 10
 
-void general_simplex_kernel(dict_t* dict);
+dict_t* general_simplex_kernel(dict_t* dict);
 
 #endif

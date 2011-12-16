@@ -53,14 +53,14 @@ void get_config(int argc, char** argv) {
 		
 		// Project Options
 		} else if (check_option(argv[index], "--parallel", "-p")) {
-			if (strncmp(argv[index + 1], "mp", 2) == 0) {
+			if (strncmp(argv[index + 1], "auto", 4) == 0) {
+				cfg.pmode = AUTO;
+				
+			} else if (strncmp(argv[index + 1], "mp", 2) == 0) {
 				cfg.pmode = MP;
 				
 			} else if (strncmp(argv[index + 1], "pthreads", 8) == 0) {
 				cfg.pmode = PTHREADS;
-				
-			} else if (strncmp(argv[index + 1], "gpu", 3) == 0) {
-				cfg.pmode = GPU;
 			}
 			
 			++index;
@@ -103,10 +103,11 @@ static inline bool check_option(char* opt, char* lng, char* srt) {
 }
 
 static inline void init_config(void) {
+	cfg.blands			= FALSE;
+	cfg.init_done			= FALSE;
 	cfg.mathprog_filename	= 0;
 	cfg.method			= GS;
 	cfg.pmode				= NONE;
-	cfg.blands			= FALSE;
 	cfg.profys			= TRUE;
 	cfg.simplex_limit		= 0;
 	cfg.verbose			= FALSE;

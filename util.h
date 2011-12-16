@@ -9,8 +9,9 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#define MAX(a,b) (a < b ? b : a)
-#define MIN(a,b) (a < b ? a : b)
+#define ABS(a)   (a < 0 ? -a : a)
+#define MAX(a,b) (a < b ?  b : a)
+#define MIN(a,b) (a < b ?  a : b)
 
 #define EPSILON 1e-5
 #define FPN_IS_ZERO(n) (-EPSILON < n && n < EPSILON)
@@ -28,9 +29,9 @@ typedef enum {
 
 typedef enum {
 	NONE = 0,
+	AUTO,
 	MP,
-	PTHREADS,
-	GPU
+	PTHREADS
 } pmode_t;
 
 typedef struct {
@@ -43,6 +44,8 @@ typedef struct {
 	bool profys;
 	
 	uint simplex_limit;
+	
+	bool init_done;
 	
 	bool verbose;
 	bool vv;

@@ -18,7 +18,7 @@ extern config_t cfg;
 
 // Functions
 
-void general_simplex_kernel(dict_t* dict) {
+dict_t* general_simplex_kernel(dict_t* dict) {
 	uint iters = 0;
 	uint unprogress = 0;
 	double prev_objective;
@@ -43,7 +43,7 @@ void general_simplex_kernel(dict_t* dict) {
 			dict_flip_rest(dict, el_result.entering, el_result.new_rest);
 			
 		} else {
-			dict_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest, el_result.adj_amount);
+			dict = dict_pivot(dict, el_result.entering, el_result.leaving, el_result.new_rest, el_result.adj_amount);
 		}
 		
 		if (cfg.profys) {
@@ -71,4 +71,6 @@ void general_simplex_kernel(dict_t* dict) {
 			printf("\t** END OF SIMPLEX **\n\n");
 		}
 	}
+	
+	return dict;
 }

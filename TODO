@@ -1,8 +1,60 @@
-* Convert loops to more efficient form.
-* Fix initialization?
-* OpenMP
-* pthreads based parallelization
-* Verbose output file
-* Different input formats
-* Different output formats
-* Add optimizations to the Makefile
+####################
+# Short Term To Do #
+####################
+
+* Fix initialization.
+* Smart verbose prints.
+	* Don't print matrices above a certain size.  Just info.
+* Add optimizations to the Makefile.
+
+############
+# Planning #
+############
+
+Parallelization Modes:
+	* Auto
+	* OpenMP
+	* pthreads
+	* OpenMPI
+	* OpenCL
+	* OpenMPI + OpenCL
+	* none (DONE)
+
+Decomposition Modes:
+	* Spatial
+	* Task
+
+Matrix Implementations:
+	* Custom (DONE)
+	* LAPACK & BLAS
+
+Execution Modes:
+	* Initialize Only
+	* Solve
+		* Minimize
+		* Maximize
+
+Output Options:
+	* Verbose (DONE)
+	* Very Verbose (DONE)
+	* Convert
+	* Output File
+	* Show Stats
+
+Stats:
+	* Max Memory Used
+	* Current Memory Used
+	* Elapsed Time
+	* Vertices Visited
+
+Memory Allocators:
+	* StreamFlow
+	* Standard Malloc
+	* tcmalloc
+	* jemalloc
+
+#################
+# Scratch Space #
+#################
+
+* Deal with objective2 in dict_pivot() and dict_remove_aux_vars().
