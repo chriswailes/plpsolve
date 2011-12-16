@@ -1,21 +1,20 @@
-#Authors:		Chris Wailes <chris.wailes@gmail.com> and
-#			Jonathan Turner <jonathan.turner@colorado.edu>
-#Project:		CS 5654 PA1
+#Authors:		Chris Wailes <chris.wailes@gmail.com>
+#Project:		Parallel Linear Program Solver
 #Date:		2011/10/16
-#Description:	Makefile for PA1.
+#Description:	Makefile for plpsolve.
 
 CC		= gcc
 CFLAGS	= -Wall -O3
 LFLAGS	=
 
-PROGRAM	= superlp
+PROGRAM	= plpsolve
 
 SOURCE	= dictionary.c input.c kernels.c main.c matrix.c output.c util.c
 EXECS	= superlp
 
 all: $(EXECS)
 
-superlp: $(SOURCE)
+plpsolve: $(SOURCE)
 	$(CC) $(CFLAGS) $(LFLAGS) -o $(PROGRAM) $(SOURCE)
 
 .PHONY: clean

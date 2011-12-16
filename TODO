@@ -57,5 +57,3 @@ Memory Allocators:
 #################
 # Scratch Space #
 #################
-
-* Deal with objective2 in dict_pivot() and dict_remove_aux_vars().
