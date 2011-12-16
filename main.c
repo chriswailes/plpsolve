@@ -43,8 +43,6 @@ int main(int argc, char** argv) {
 
 	// Initialize the dictionary proper.
 	if (dict_init(&dict)) {
-		printf("Dictionary required initialization.\n");
-		
 		if (cfg.verbose) {
 			printf("Dictionary after initialization:\n");
 			dict_view(dict);

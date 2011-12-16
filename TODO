@@ -2,7 +2,8 @@
 # Short Term To Do #
 ####################
 
-* Fix initialization.
+* Swap dict_new() parameters.
+* Adjustable sensitivity (set value used by FPN_IS_ZERO).
 * Smart verbose prints.
 	* Don't print matrices above a certain size.  Just info.
 * Add optimizations to the Makefile.

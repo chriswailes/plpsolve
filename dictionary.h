@@ -86,6 +86,7 @@ typedef struct {
 
 		void		dict_add_aux_vars(dict_t* dict, iset_t iset);
 		void		dict_add_split_vars(dict_t* dict, uvars_t uvars);
+		void		dict_copy(dict_t* new_dict, dict_t* orig_dict);
 		void		dict_flip_rest(dict_t* dict, uint var_index, rest_t new_rest);
 		void		dict_free(dict_t* dict);
 		double	dict_get_constraint_value(const dict_t* dict, uint con_index);

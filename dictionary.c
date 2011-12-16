@@ -72,6 +72,7 @@ void dict_add_split_vars(dict_t* dict, uvars_t uvars) {
 		dict->col_bounds.upper[col_index1]	= 0;
 		dict->col_bounds.lower[col_index1]	= -INFINITY;
 		dict->col_rests[col_index1]		= UPPER;
+		dict->objective[col_index1]		= dict->objective[col_index0];
 		
 		for (row_index = dict->num_cons; row_index-- > 0;) {
 			matrix_set_value(&dict->matrix, row_index, col_index1, matrix_get_value(&dict->matrix, row_index, col_index0));
@@ -81,6 +82,31 @@ void dict_add_split_vars(dict_t* dict, uvars_t uvars) {
 	}
 	
 	dict->split_vars = uvars.indices;
+}
+
+void dict_copy(dict_t* new_dict, dict_t* orig_dict) {
+	uint row_index;
+	
+	// Copy the matrix.
+	for (row_index = orig_dict->num_cons; row_index-- > 0;) {
+		memcpy(matrix_get_address(&new_dict->matrix, row_index, 0), matrix_get_address(&orig_dict->matrix, row_index, 0), orig_dict->num_vars * sizeof(double));
+	}
+	
+	// Copy the labels.
+	memcpy(new_dict->col_labels, orig_dict->col_labels, orig_dict->num_vars * sizeof(int));
+	memcpy(new_dict->row_labels, orig_dict->row_labels, orig_dict->num_cons * sizeof(int));
+	
+	// Copy the bounds.
+	memcpy(new_dict->col_bounds.upper, orig_dict->col_bounds.upper, orig_dict->num_vars * sizeof(double));
+	memcpy(new_dict->col_bounds.lower, orig_dict->col_bounds.lower, orig_dict->num_vars * sizeof(double));
+	
+	memcpy(new_dict->col_rests, orig_dict->col_rests, orig_dict->num_vars * sizeof(rest_t));
+	
+	memcpy(new_dict->row_bounds.upper, orig_dict->row_bounds.upper, orig_dict->num_cons * sizeof(double));
+	memcpy(new_dict->row_bounds.lower, orig_dict->row_bounds.lower, orig_dict->num_cons * sizeof(double));
+	
+	// Copy the objective.
+	memcpy(new_dict->objective, orig_dict->objective, orig_dict->num_vars * sizeof(double));
 }
 
 void dict_flip_rest(dict_t* dict, uint var_index, rest_t new_rest) {
@@ -107,6 +133,9 @@ void dict_flip_rest(dict_t* dict, uint var_index, rest_t new_rest) {
 }
 
 void dict_free(dict_t* dict) {
+	
+	if (dict == NULL) return;
+	
 	free(dict->objective);
 	free(dict->row_values);
 	
@@ -218,7 +247,7 @@ double dict_get_var_value_by_label(const dict_t* dict, uint var_label) {
 	
 	for (row_index = dict->num_cons; row_index-- > 0;) {
 		if (dict->row_labels[row_index] == var_label) {
-
+			
 			var_total = dict->row_values[row_index];
 
 			if (dict_var_was_split(dict, var_label)) {
@@ -233,31 +262,139 @@ double dict_get_var_value_by_label(const dict_t* dict, uint var_label) {
 	exit(-1);
 }
 
-void dict_copy(dict_t* new_dict, dict_t* orig_dict) {
-	uint row_index;
+bool dict_init(dict_t** dict) {
+	uint col_index, row_index;
+	uint last_orig_var_label;
 	
-	// Copy the matrix.
-	for (row_index = orig_dict->num_cons; row_index-- > 0;) {
-		memcpy(matrix_get_address(&new_dict->matrix, row_index, 0), matrix_get_address(&orig_dict->matrix, row_index, 0), orig_dict->num_vars * sizeof(double));
+	uvars_t uvars;
+	iset_t iset;
+	
+	dict_t* stage1_dict;
+	dict_t* stage2_dict;
+	dict_t* orig_dict = *dict;
+	
+	uvars = dict_get_unbounded_vars(orig_dict);
+	
+	if (uvars.size == 0) {
+		stage1_dict = orig_dict;
+		orig_dict = NULL;
+		
+	} else {
+		/*
+		 * Allocate a new dictionary with enough space for the split
+		 * variables.
+		 */
+		stage1_dict = dict_new(orig_dict->num_vars + uvars.size, orig_dict->num_cons);
+		stage1_dict->num_aux_vars = 0;
+		stage1_dict->num_split_vars = uvars.size;
+		
+		// Copy the original dictionary into the stage 1 dictionary.
+		dict_copy(stage1_dict, orig_dict);
+		
+		// Add the split variables.
+		dict_add_split_vars(stage1_dict, uvars);
+		
+		/*
+		 * Set the bounds and values now that we don't have a column resting
+		 * on infinity.
+		 */ 
+		dict_set_bounds(stage1_dict);
+		dict_set_values(stage1_dict);
 	}
 	
-	// Copy the labels.
-	memcpy(new_dict->col_labels, orig_dict->col_labels, orig_dict->num_vars * sizeof(int));
-	memcpy(new_dict->row_labels, orig_dict->row_labels, orig_dict->num_cons * sizeof(int));
+	// Free the original dictionary.
+	dict_free(orig_dict);
 	
-	// Copy the bounds.
-	memcpy(new_dict->col_bounds.upper, orig_dict->col_bounds.upper, orig_dict->num_vars * sizeof(double));
-	memcpy(new_dict->col_bounds.lower, orig_dict->col_bounds.lower, orig_dict->num_vars * sizeof(double));
+	iset = dict_get_infeasible_rows(stage1_dict);
 	
-	memcpy(new_dict->row_bounds.upper, orig_dict->row_bounds.upper, orig_dict->num_cons * sizeof(double));
-	memcpy(new_dict->row_bounds.lower, orig_dict->row_bounds.lower, orig_dict->num_cons * sizeof(double));
+	// Return False if we didn't do any initialization.
+	if ((uvars.size + iset.size) == 0) {
+		return FALSE;
+		
+	}
 	
-	memcpy(new_dict->col_rests, orig_dict->col_rests, orig_dict->num_cons * sizeof(rest_t));
+	/*
+	 * Set the appropriate dictionary reference and return True if we had to
+	 * split some variables.
+	 */
+	if (iset.size == 0) {
+		(*dict) = stage1_dict;
+		return TRUE;
+	}
 	
-	// Copy the objective.
-	memcpy(new_dict->objective, orig_dict->objective, orig_dict->num_cons * sizeof(double));
+	// Allocate a new dictionary with enough space for the auxilary variables.
+	stage2_dict = dict_new(stage1_dict->num_vars + iset.size, stage1_dict->num_cons);
+	stage2_dict->num_aux_vars = iset.size;
+	stage2_dict->num_split_vars = stage1_dict->num_split_vars;
+	stage2_dict->split_vars = stage1_dict->split_vars;
+	
+	stage1_dict->split_vars = NULL;
+	
+	// Copy the stage 1 dictionary values into the stage 2 dictionary.
+	dict_copy(stage2_dict, stage1_dict);
+	
+	// Free the stage 1 dictionary.
+	dict_free(stage1_dict);
+	
+	// Do the Electric Boogaloo
+	stage2_dict->objective2 = calloc(stage2_dict->num_vars, sizeof(double));
+	
+	for (col_index = stage2_dict->num_vars; col_index-- > 0;) {
+		if (col_index < stage2_dict->num_vars - iset.size) {
+			stage2_dict->objective2[col_index] = stage2_dict->objective[col_index];
+			
+		} else {
+			stage2_dict->objective2[col_index] = 0;
+		}
+	}
+	
+	// Initialize the new objective function.
+	for (col_index = stage2_dict->num_vars; col_index-- > 0;) {
+		stage2_dict->objective[col_index] = 0.0;
+	}
+	
+	// Add the new auxilary variables.
+	dict_add_aux_vars(stage2_dict, iset);
+	
+	// Perform simplex.
+	dict_set_values(stage2_dict);
+	general_simplex_kernel(stage2_dict);
+	
+	// Check original problem feasability.
+	if (!FPN_IS_ZERO(stage2_dict->objective_value)) {
+		printf("Problem is infeasible: %f.\n", stage2_dict->objective_value);
+		exit(0);
+	}
+	
+	// Replace objective function.
+	free(stage2_dict->objective);
+	stage2_dict->objective	= stage2_dict->objective2;
+	stage2_dict->objective2	= NULL;
+	
+	// Re-calculate the objective value.
+	dict_set_objective_value(stage2_dict);
+	
+	// Remove auxilary variables.
+	stage2_dict = dict_remove_aux_vars(stage2_dict);
+	
+	// Adjust bounds on any remaining auxilary variables.
+	if (stage2_dict->num_aux_vars > 0) {
+		last_orig_var_label = stage2_dict->num_vars + stage2_dict->num_cons - stage2_dict->num_aux_vars - stage2_dict->num_split_vars;
+	
+		for (row_index = stage2_dict->num_cons; row_index-- > 0;) {
+			if (stage2_dict->row_labels[row_index] >= last_orig_var_label) {
+				stage2_dict->row_bounds.upper[row_index] = 0.0;
+				stage2_dict->row_bounds.lower[row_index] = 0.0;
+			}
+		}
+	}
+	
+	// Set the appropriate dictionary reference and return True.
+	(*dict) = stage2_dict;
+	return TRUE;
 }
 
+/*
 bool dict_init(dict_t** dict) {
 	uint col_index, row_index;
 	uint last_orig_var_label;
@@ -351,6 +488,7 @@ bool dict_init(dict_t** dict) {
 	
 	return TRUE;
 }
+*/
 
 bool dict_is_final(const dict_t* dict) {
 	uint col_index;
@@ -475,6 +613,9 @@ dict_t* dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest
 	// Perform the same steps for the objective function.
 	coefficient = dict->objective[var_index];
 	dict->objective_value += coefficient * adj_amount;
+	
+	if (FPN_IS_ZERO(dict->objective_value)) dict->objective_value = 0.0;
+	
 	for (col_index = dict->num_vars; col_index-- > 0;) {
 		if (col_index == var_index) {
 			dict->objective[col_index]  = coefficient * tmp_row[col_index];
@@ -482,17 +623,25 @@ dict_t* dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest
 		} else {
 			dict->objective[col_index] += coefficient * tmp_row[col_index];
 		}
+		
+		if (FPN_IS_ZERO(dict->objective[col_index])) dict->objective[col_index] = 0.0;
 	}
 	
 	if (!cfg.init_done) {
 		coefficient = dict->objective2[var_index];
 		for (col_index = dict->num_vars; col_index-- > 0;) {
+			swap = dict->objective2[col_index];
+			
 			if (col_index == var_index) {
 				dict->objective2[col_index]  = coefficient * tmp_row[col_index];
 			
 			} else {
 				dict->objective2[col_index] += coefficient * tmp_row[col_index];
 			}
+			
+			if (dict->objective2[col_index] == INFINITY) printf("Infinity: %u, (%g) %g * %g\n", col_index, swap, coefficient, tmp_row[col_index]);
+			
+			if (FPN_IS_ZERO(dict->objective2[col_index])) dict->objective2[col_index] = 0.0;
 		}
 	}
 	
@@ -529,7 +678,8 @@ dict_t* dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest
 
 dict_t* dict_remove_aux_vars(dict_t* orig_dict) {
 	uint col_index0, col_index1, row_index;
-	uint last_orig_var_label, remove_count = 0;
+	uint remove_count = 0;
+	int last_orig_var_label;
 	
 	dict_t* new_dict;
 	
@@ -553,7 +703,7 @@ dict_t* dict_remove_aux_vars(dict_t* orig_dict) {
 	}
 	
 	// Alocate our new dictionary.
-	new_dict = dict_new(orig_dict->num_cons, orig_dict->num_vars - remove_count);
+	new_dict = dict_new(orig_dict->num_vars - remove_count, orig_dict->num_cons);
 	
 	/*
 	 * Selectivly copy/move data to new dictionary.
@@ -860,7 +1010,7 @@ void dict_view(const dict_t* dict) {
 		
 		for (col_index = 0; col_index < dict->num_vars; ++col_index) {
 			tmp = matrix_get_value(&dict->matrix, row_index, col_index);
-			printf(" % 7.3g", tmp == -0 ? 0 : tmp);
+			printf(" % 7.2g", tmp == -0 ? 0 : tmp);
 		}
 		
 		// Print the constraint's value.
@@ -909,7 +1059,6 @@ void dict_view_answer(const dict_t* dict) {
 
 	for (var_index = 1; var_index <= num_orig_vars; ++var_index) {
 		snprintf(buffer, 10, "x%u", var_index);
-		
 		printf("\t%4s = %- 7.3g\n", buffer, dict_get_var_value_by_label(dict, var_index));
 	}
 }
