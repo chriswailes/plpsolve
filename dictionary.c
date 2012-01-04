@@ -360,7 +360,7 @@ bool dict_init(dict_t** dict) {
 	general_simplex_kernel(stage2_dict);
 	
 	// Check original problem feasability.
-	if (!FPN_IS_ZERO(stage2_dict->objective_value)) {
+	if (-1e-5 > stage2_dict->objective_value || stage2_dict->objective_value >  1e-5) {
 		printf("Problem is infeasible: %f.\n", stage2_dict->objective_value);
 		exit(0);
 	}
@@ -392,102 +392,6 @@ bool dict_init(dict_t** dict) {
 	(*dict) = stage2_dict;
 	return TRUE;
 }
-
-/*
-bool dict_init(dict_t** dict) {
-	uint col_index, row_index;
-	uint last_orig_var_label;
-	
-	uvars_t uvars;
-	iset_t iset;
-	
-	dict_t* new_dict;
-	dict_t* orig_dict = *dict;
-	
-	uvars = dict_get_unbounded_vars(orig_dict);
-	iset  = dict_get_infeasible_rows(orig_dict);		
-	
-	if ((uvars.size + iset.size) == 0) {
-		return FALSE;
-	}
-	
-	// Allocate a new dictionary with enough space for the auxilary variables.
-	new_dict = dict_new(orig_dict->num_vars + uvars.size + iset.size, orig_dict->num_cons);
-	new_dict->num_aux_vars	= iset.size;
-	new_dict->num_split_vars = uvars.size;
-	
-	//Copy our original dictionary into the new dictionary.
-	dict_copy(new_dict, orig_dict);
-	
-	// Do the Electric Boogaloo
-	new_dict->objective2 = calloc(new_dict->num_vars, sizeof(double));
-	
-	for (col_index = new_dict->num_vars; col_index-- > 0;) {
-		if (col_index < orig_dict->num_vars) {
-			new_dict->objective2[col_index] = orig_dict->objective[col_index];
-			
-		} else {
-			new_dict->objective2[col_index] = 0;
-		}
-	}
-	
-	// Free the original dictionary.
-	dict_free(orig_dict);
-	
-	// Initialize the new objective function.
-	for (col_index = new_dict->num_vars; col_index-- > 0;) {
-		new_dict->objective[col_index] = 0.0;
-	}
-	
-	// Add the new split variables.
-	dict_add_split_vars(new_dict, uvars);
-	
-	// Add the new auxilary variables.
-	dict_add_aux_vars(new_dict, iset);
-	
-	// Perform simplex.
-	dict_set_values(new_dict);
-	
-	dict_view(new_dict);
-	
-	general_simplex_kernel(new_dict);
-	
-	dict_view(new_dict);
-	
-	// Check original problem feasability.
-	if (new_dict->objective_value != 0) {
-		printf("Problem is infeasible: %f.\n", new_dict->objective_value);
-		exit(0);
-	}
-	
-	// Replace objective function.
-	free(new_dict->objective);
-	new_dict->objective		= new_dict->objective2;
-	new_dict->objective2	= NULL;
-	
-	dict_set_objective_value(new_dict);
-	
-	// Remove auxilary variables.
-	new_dict = dict_remove_aux_vars(new_dict);
-	
-	// Adjust bounds on any remaining auxilary variables.
-	if (new_dict->num_aux_vars > 0) {
-		last_orig_var_label = new_dict->num_vars + new_dict->num_cons - new_dict->num_aux_vars - new_dict->num_split_vars;
-	
-		for (row_index = new_dict->num_cons; row_index-- > 0;) {
-			if (new_dict->row_labels[row_index] >= last_orig_var_label) {
-				new_dict->row_bounds.upper[row_index] = 0.0;
-				new_dict->row_bounds.lower[row_index] = 0.0;
-			}
-		}
-	}
-	
-	// Set the pointer to the new dictionary.
-	(*dict) = new_dict;
-	
-	return TRUE;
-}
-*/
 
 bool dict_is_final(const dict_t* dict) {
 	uint col_index;
@@ -585,28 +489,56 @@ dict_t* dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest
 	 * Update the constraint values and then substitute new rows into old rows
 	 * in the matrix.
 	 */
-	for (row_index = dict->num_cons; row_index-- > 0;) {
-		if (row_index == con_index) {
-			dict->row_values[row_index] = dict_get_var_bound_value(dict, var_index) + adj_amount;
+	
+	if (cfg.pmode == OMP) {
+		#pragma omp parallel for schedule(dynamic, 20) private(coefficient, row_index, col_index) shared(adj_amount)
+		for (row_index = 0; row_index < dict->num_cons; ++row_index) {
+			if (row_index == con_index) {
+				dict->row_values[row_index] = dict_get_var_bound_value(dict, var_index) + adj_amount;
 			
-		} else {
-			coefficient = matrix_get_value(&dict->matrix, row_index, var_index);
+			} else {
+				coefficient = matrix_get_value(&dict->matrix, row_index, var_index);
 			
-			dict->row_values[row_index] += coefficient * adj_amount;
+				dict->row_values[row_index] += coefficient * adj_amount;
 			
-			for (col_index = dict->num_vars; col_index-- > 0;) {
-				if (col_index == var_index) {
-					matrix_set_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
+				for (col_index = dict->num_vars; col_index-- > 0;) {
+					if (col_index == var_index) {
+						matrix_set_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
 					
-				} else {
-					matrix_accum_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
-				}
+					} else {
+						matrix_accum_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
+					}
 				
-				if (FPN_IS_ZERO(matrix_get_value(&dict->matrix, row_index, col_index))) matrix_set_value(&dict->matrix, row_index, col_index, 0.0);
+					if (FPN_IS_ZERO(matrix_get_value(&dict->matrix, row_index, col_index))) matrix_set_value(&dict->matrix, row_index, col_index, 0.0);
+				}
 			}
-		}
 		
-		if (FPN_IS_ZERO(dict->row_values[row_index])) dict->row_values[row_index] = 0.0;
+			if (FPN_IS_ZERO(dict->row_values[row_index])) dict->row_values[row_index] = 0.0;
+		}
+	} else {
+		for (row_index = dict->num_cons; row_index-- > 0;) {
+			if (row_index == con_index) {
+				dict->row_values[row_index] = dict_get_var_bound_value(dict, var_index) + adj_amount;
+			
+			} else {
+				coefficient = matrix_get_value(&dict->matrix, row_index, var_index);
+			
+				dict->row_values[row_index] += coefficient * adj_amount;
+			
+				for (col_index = dict->num_vars; col_index-- > 0;) {
+					if (col_index == var_index) {
+						matrix_set_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
+					
+					} else {
+						matrix_accum_value(&dict->matrix, row_index, col_index, coefficient * tmp_row[col_index]);
+					}
+				
+					if (FPN_IS_ZERO(matrix_get_value(&dict->matrix, row_index, col_index))) matrix_set_value(&dict->matrix, row_index, col_index, 0.0);
+				}
+			}
+		
+			if (FPN_IS_ZERO(dict->row_values[row_index])) dict->row_values[row_index] = 0.0;
+		}
 	}
 	
 	// Perform the same steps for the objective function.
@@ -1054,10 +986,10 @@ void dict_view_answer(const dict_t* dict) {
 	
 	num_orig_vars = dict->num_vars - dict->num_aux_vars - dict->num_split_vars;
 	
-	printf("\t   z = %- 7.3g\n", dict->objective_value);
+	printf("\t   z = %- 7.3f\n", dict->objective_value);
 
 	for (var_index = 1; var_index <= num_orig_vars; ++var_index) {
 		snprintf(buffer, 10, "x%u", var_index);
-		printf("\t%4s = %- 7.3g\n", buffer, dict_get_var_value_by_label(dict, var_index));
+		printf("\t%4s = %f\n", buffer, dict_get_var_value_by_label(dict, var_index));
 	}
 }

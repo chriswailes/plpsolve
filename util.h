@@ -12,7 +12,7 @@
 #define MAX(a,b) (a < b ?  b : a)
 #define MIN(a,b) (a < b ?  a : b)
 
-#define EPSILON 1e-5
+#define EPSILON 1e-10
 #define FPN_IS_ZERO(n) (-EPSILON < n && n < EPSILON)
 
 #include <sys/types.h>
@@ -29,7 +29,7 @@ typedef enum {
 typedef enum {
 	NONE = 0,
 	AUTO,
-	MP,
+	OMP,
 	PTHREADS
 } pmode_t;
 

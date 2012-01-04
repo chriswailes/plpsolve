@@ -1,25 +1,14 @@
-Linear Programming Assignment #1
-Jonathan Turner and Chris Wailes
+Linear Programming Final Project
+Chris Wailes
 
-Our solver for this assignment is built with (we hope) a modular style of C, so that we can extend it further 
-with optimizations that relate to our final project for the class.  For Jonathan, this is a OpenCL-based solver 
-for LP.  For Chris, this is likely an OpenMPI-based solution.  To wit, we wanted to make sure that the solution 
-was well-engineered using good C best practices and did not attempt to optimize the path to the solution.
+For my final project I analyzed the parallelizability of a linear program solver.  The solver in question is based on the pivoting version of general form simplex.  It is able to initialize dictionaries with both unbounded variables and infeasible constraints.  As well, it implements Bland's Rule and a separate rule that selectively enables and disables Bland's Rule to ensure termination.  Lastly, several several optimizations were added, such as keeping a running account of the values of the objective function and the constraints.  This meant that the values didn't have to be re-calculated during each pivot.
 
-We implemented general form initialization and simplex for this project.  Chris took the simplex duties, while 
-Jonathan implemented initialization, file parsing, and mathprog output (for debugging).  
+Two parallelization methods were considered: data- and task-parallel.  The data parallel method simply required the instrumenting of the only hot loop with a large amount of instructions inside of it with an OpenMP parallel-for pragma.  This resulted in an overall slowdown of the application as the loop was still fairly light weight and each thread was accessing data that resided in the same cache line.  With larger problem sizes this method might be more useful, but more gain would be obtained from transitioning to revised simplex and parallelizing a loop that is part of that algorithm.
 
-Along with our source, we're submitting a small set of unit tests which we hope to grow over the coming weeks as 
-we begin to optimize the codebase further.  These unit tests cover initialization variables, variable splitting 
-of free variables, and of course, simplex itself.
+I also developed a task-parallel algorithm that I was unable to implement in time for this assignment.  This algorithm starts by creating a worker thread for each processing element in the system and pegging the thread to a specific core.  Each worker has a local priority queue in which it keeps work for it to process.  Each work unit consists of a pointer to a dictionary and a list of all possible entering and leaving pairs.  The priority of a work unit is the number of possible entering and leaving pairs, with lower numbers of pairs indicating higher priority.  This decision is meant to decrease memory usage as dictionaries with fewer pairs will get completed and subsequently freed first.  When a worker discovers that there is no work in their local work queue they will select the neighbor with the most amount of work in their queue and steal the last dictionary from the lowest priority level.  The selected work unit should be the first one added to this priority level, meaning that it has probably been pushed out of the cache due to pressure from the lower priority levels.  This will hopefully reduce the amount of cache coherency protocol traffic generated during the work-stealing phase.
 
-The test files tests/test(2-4).lp are all solved correctly by our solver.
+When a worker removes a work unit they take the initial dictionary and perform the specified pivot on it, producing a new dictionary.  A global Bloom filter is then consulted, using the labels of the basis variables as the key, to see if this dictionary has been encountered before.  If it has it is thrown away and the worker continues with the next entering/leaving pair in the work unit.  If the dictionary hasn't been encountered before the worker will generate a list of all entering and leaving pairs, attach them to the dictionary, and add them to their local priority queue as a new work unit.  If the generated dictionary is final a global flag is set to indicate this, along with a pointer to the final dictionary, and the worker then frees all remaining dictionaries on its work queue.  The other workers check to see if a final dictionary has been seen before starting a work unit, and if a final dictionary has been seen they will free their remaining work units and await the start of another round of simplex.
 
-###########
-# Caveats #
-###########
+This algorithm is started by a manager thread placing the initial feasible dictionary, along with the corresponding entering and leaving variable pairs, into the queue of one of the workers.  The manager then waits for a worker to find the final dictionary and returns it once it has been found.
 
-We encountered numerical problems with one, possibly two, of our test cases.  Floating point errors caused a value
-that should have been zero to be a very small number, therefor causing errors when selecting leaving variables for
-tests/test5.lp.  This same problem is suspected as the culprit in the non-termination of the second test case
-(tests/test1.lp).
+This algorithm allocates a new dictionary on each pivot, and therefor its performance will be dependent on the memory allocator used.  To judge this impact I intend to replace the standard library malloc implementation with three other allocators that are designed specifically for multi-threaded applications.  These allocators are StreamFlow, tcmalloc, and jemalloc.  Lastly, to evaluate the scalability of the two parallelization methods I plan to plot the speedup versus the serial implementation over a range of worker threads and problem sizes.  My prediction is that the task-parallel algorithm will perform better overall.

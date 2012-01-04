@@ -57,3 +57,17 @@ Memory Allocators:
 #################
 # Scratch Space #
 #################
+
+* Set up global Bloom filter
+
+* Set up workers
+	* Peg worker to core
+	* Work queues
+
+* pthreads kernel
+	* Insert initial dictionary w/ entering and leaving work units
+	* Wait for a worker to find a final dictionary
+
+* Workers
+	* Final dictionary is placed into a global pointer
+	* Remaining dictionaries on queues are freed

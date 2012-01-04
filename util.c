@@ -55,8 +55,8 @@ void get_config(int argc, char** argv) {
 			if (strncmp(argv[index + 1], "auto", 4) == 0) {
 				cfg.pmode = AUTO;
 				
-			} else if (strncmp(argv[index + 1], "mp", 2) == 0) {
-				cfg.pmode = MP;
+			} else if (strncmp(argv[index + 1], "omp", 2) == 0) {
+				cfg.pmode = OMP;
 				
 			} else if (strncmp(argv[index + 1], "pthreads", 8) == 0) {
 				cfg.pmode = PTHREADS;

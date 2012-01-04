@@ -4,13 +4,13 @@
 #Description:	Makefile for plpsolve.
 
 CC		= gcc
-CFLAGS	= -Wall -O3
+CFLAGS	= -Wall -O3 -fopenmp
 LFLAGS	=
 
 PROGRAM	= plpsolve
 
 SOURCE	= dictionary.c input.c kernels.c main.c matrix.c output.c util.c
-EXECS	= superlp
+EXECS	= plpsolve
 
 all: $(EXECS)
 
