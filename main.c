@@ -16,6 +16,7 @@
 #include "kernels.h"
 #include "output.h"
 #include "util.h"
+#include "worker.h"
 
 // Global Variables
 
@@ -34,6 +35,10 @@ int main(int argc, char** argv) {
 		output_glpsol(dict, cfg.mathprog_filename);
 		exit(0);
 	}
+	
+	if (cfg.pmode == PTHREADS) {
+		workers_setup();
+	}
 
 	if (cfg.verbose) {
 		printf("Initial Dictionary:\n");
@@ -50,12 +55,7 @@ int main(int argc, char** argv) {
 	
 	cfg.init_done = TRUE;
 	
-	switch (cfg.method) {
-		case GS:
-		default:
-			dict = general_simplex_kernel(dict);
-			break;
-	}
+	dict = kernel_select(dict);
 	
 	if (cfg.verbose) {
 		printf("Final Dictionary:\n");

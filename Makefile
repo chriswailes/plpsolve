@@ -4,17 +4,17 @@
 #Description:	Makefile for plpsolve.
 
 CC		= gcc
-CFLAGS	= -Wall -O3 -fopenmp
-LFLAGS	=
+CFLAGS	= -Wall -O3 -fopenmp -fPIC -g
+LFLAGS	= -pthread
 
 PROGRAM	= plpsolve
 
-SOURCE	= dictionary.c input.c kernels.c main.c matrix.c output.c util.c
+SOURCE	= bloom.c dictionary.c hashes.c input.c kernels.c list.c main.c matrix.c output.c util.c work_queue.c worker.c
 EXECS	= plpsolve
 
 all: $(EXECS)
 
-plpsolve: $(SOURCE)
+$(PROGRAM): $(SOURCE)
 	$(CC) $(CFLAGS) $(LFLAGS) -o $(PROGRAM) $(SOURCE)
 
 .PHONY: clean

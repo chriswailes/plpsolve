@@ -46,6 +46,8 @@ typedef struct {
 	
 	bool init_done;
 	
+	uint ncpus;
+	
 	bool verbose;
 	bool vv;
 	char* mathprog_filename;

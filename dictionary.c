@@ -83,6 +83,15 @@ void dict_add_split_vars(dict_t* dict, uvars_t uvars) {
 	dict->split_vars = uvars.indices;
 }
 
+dict_t* dict_clone(dict_t* orig) {
+	dict_t* clone;
+	
+	clone = dict_new(orig->num_vars, orig->num_cons);
+	dict_copy(clone, orig);
+	
+	return clone;
+}
+
 void dict_copy(dict_t* new_dict, dict_t* orig_dict) {
 	uint row_index;
 	
@@ -309,7 +318,6 @@ bool dict_init(dict_t** dict) {
 	// Return False if we didn't do any initialization.
 	if ((uvars.size + iset.size) == 0) {
 		return FALSE;
-		
 	}
 	
 	/*
@@ -317,7 +325,7 @@ bool dict_init(dict_t** dict) {
 	 * split some variables.
 	 */
 	if (iset.size == 0) {
-		(*dict) = stage1_dict;
+		*dict = stage1_dict;
 		return TRUE;
 	}
 	
@@ -389,7 +397,7 @@ bool dict_init(dict_t** dict) {
 	}
 	
 	// Set the appropriate dictionary reference and return True.
-	(*dict) = stage2_dict;
+	*dict = stage2_dict;
 	return TRUE;
 }
 
@@ -569,8 +577,6 @@ dict_t* dict_pivot(dict_t* dict, uint var_index, uint con_index, rest_t new_rest
 			} else {
 				dict->objective2[col_index] += coefficient * tmp_row[col_index];
 			}
-			
-			if (dict->objective2[col_index] == INFINITY) printf("Infinity: %u, (%g) %g * %g\n", col_index, swap, coefficient, tmp_row[col_index]);
 			
 			if (FPN_IS_ZERO(dict->objective2[col_index])) dict->objective2[col_index] = 0.0;
 		}
@@ -986,10 +992,10 @@ void dict_view_answer(const dict_t* dict) {
 	
 	num_orig_vars = dict->num_vars - dict->num_aux_vars - dict->num_split_vars;
 	
-	printf("\t   z = %- 7.3f\n", dict->objective_value);
+	printf("\t   z = %g\n", dict->objective_value);
 
 	for (var_index = 1; var_index <= num_orig_vars; ++var_index) {
 		snprintf(buffer, 10, "x%u", var_index);
-		printf("\t%4s = %f\n", buffer, dict_get_var_value_by_label(dict, var_index));
+		printf("\t%4s = %g\n", buffer, dict_get_var_value_by_label(dict, var_index));
 	}
 }

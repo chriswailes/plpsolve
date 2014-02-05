@@ -106,6 +106,7 @@ static inline void init_config(void) {
 	cfg.init_done			= FALSE;
 	cfg.mathprog_filename	= 0;
 	cfg.method			= GS;
+	cfg.ncpus				= sysconf(_SC_NPROCESSORS_ONLN);
 	cfg.pmode				= NONE;
 	cfg.profys			= TRUE;
 	cfg.simplex_limit		= 0;

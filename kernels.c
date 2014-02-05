@@ -10,6 +10,7 @@
 // Project Includes
 #include "dictionary.h"
 #include "kernels.h"
+#include "worker.h"
 
 // Global Variables
 
@@ -73,3 +74,25 @@ dict_t* general_simplex_kernel(dict_t* dict) {
 	
 	return dict;
 }
+
+dict_t* kernel_select(dict_t* dict) {
+	switch (cfg.pmode) {
+		case PTHREADS:
+			dict = pthreads_kernel(dict);
+			break;
+		
+		case AUTO:
+		case OMP:
+		case NONE:
+		default:
+			dict = general_simplex_kernel(dict);
+			break;
+	}
+	
+	return dict;
+}
+
+inline dict_t* pthreads_kernel(dict_t* dict) {
+	return workers_manager(dict);
+}
+

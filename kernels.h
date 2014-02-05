@@ -13,5 +13,7 @@
 #define PROF_Y_THRESHOLD 10
 
 dict_t* general_simplex_kernel(dict_t* dict);
+dict_t* kernel_select(dict_t* dict);
+dict_t* pthreads_kernel(dict_t* dict);
 
 #endif
